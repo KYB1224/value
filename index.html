@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="apple-touch-icon" href="https://i.meee.com.tw/0B09Mdp.png">
+  <title>專屬健康紀錄</title>
+
+  <!-- 載入 Supabase SDK -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body { background-color: #f4f6f9; padding: 15px; color: #333; }
+    .card { background: white; border-radius: 16px; padding: 20px; max-width: 480px; margin: 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    h2 { text-align: center; margin-bottom: 20px; font-size: 1.5rem; color: #2c3e50; }
+    
+    .sync-box { display: flex; gap: 8px; margin-bottom: 20px; background: #eef2f7; padding: 10px; border-radius: 10px; }
+    .sync-box input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 1.1rem; text-align: center; font-weight: bold; }
+    .sync-box button { padding: 10px 16px; background: #3498db; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1rem; }
+
+    .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+    .tab-btn { flex: 1; padding: 12px; border: none; background: #e0e0e0; border-radius: 8px; font-size: 1.15rem; font-weight: bold; cursor: pointer; color: #666; transition: 0.2s; }
+    .tab-btn.active { background: #3498db; color: white; }
+
+    .form-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+    .form-group.single { grid-template-columns: 1fr; }
+    input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 1.15rem; outline: none; }
+    input:focus, select:focus { border-color: #3498db; }
+
+    .submit-btn { width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 1.2rem; font-weight: bold; color: white; cursor: pointer; margin-bottom: 20px; transition: 0.2s; }
+    .btn-bp { background-color: #2ecc71; }
+    .btn-bs { background-color: #e74c3c; }
+
+    /* 時間篩選按鈕樣式 */
+    .filter-box { display: flex; gap: 8px; margin-bottom: 15px; }
+    .filter-btn { flex: 1; padding: 10px 0; border: 1px solid #cbd5e1; background: white; border-radius: 8px; font-size: 1.05rem; color: #475569; cursor: pointer; text-align: center; font-weight: bold; }
+    .filter-btn.active { background: #475569; color: white; border-color: #475569; }
+
+    .history-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 2px solid #eee; display: flex; justify-content: space-between; }
+    .record-item { background: #f8f9fa; padding: 14px; border-radius: 10px; margin-bottom: 10px; border-left: 5px solid #3498db; }
+    
+    /* 紀錄卡片頂部排版優化：自動彈性適應窄螢幕 */
+    .record-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; color: #2c3e50; font-size: 1.05rem; font-weight: bold; margin-bottom: 8px; }
+    .record-time { white-space: nowrap; }
+    .record-tags { display: flex; gap: 4px; align-items: center; flex-wrap: nowrap; }
+    .record-body { display: flex; justify-content: space-between; align-items: center; }
+    .record-data { font-size: 1.35rem; font-weight: bold; color: #111; line-height: 1.4; }
+    .record-subdata { font-size: 1.1rem; font-weight: bold; color: #555; margin-top: 2px; }
+    
+    /* 純文字刪除按鈕 */
+    .delete-btn {
+      background: #fee2e2;
+      color: #dc2626;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.2s;
+      white-space: nowrap;
+    }
+    .delete-btn:active { background: #fca5a5; }
+
+    /* 標籤樣式優化：防止字體過大排版破裂 */
+    .tag { display: inline-block; padding: 4px 8px; border-radius: 6px; font-size: 0.95rem; color: white; font-weight: bold; white-space: nowrap; }
+    .bg-period { background: #64748b; }
+    .bg-normal { background: #2ecc71; }
+    .bg-warn { background: #f39c12; }
+    .bg-danger { background: #e74c3c; }
+    .bg-low { background: #3498db; }
+
+    /* 自訂大字體提示彈窗 (Modal) */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .modal-box {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      width: 85%;
+      max-width: 360px;
+      text-align: center;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    }
+    .modal-msg {
+      font-size: 1.3rem;
+      font-weight: bold;
+      color: #2c3e50;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+    .modal-buttons {
+      display: flex;
+      gap: 10px;
+    }
+    .modal-btn {
+      flex: 1;
+      padding: 12px;
+      background: #3498db;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .modal-btn.cancel {
+      background: #94a3b8;
+    }
+    .modal-btn.danger {
+      background: #e74c3c;
+    }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <h2>專屬健康紀錄</h2>
+
+  <!-- 家庭代碼同步 -->
+  <div class="sync-box">
+    <input type="text" id="familyCode" placeholder="請輸入家庭代碼">
+    <button onclick="loadData()">同步</button>
+  </div>
+
+  <!-- 分頁按鈕 -->
+  <div class="tabs">
+    <button class="tab-btn active" id="btnTabBp" onclick="switchTab('bp')">❤️ 血壓</button>
+    <button class="tab-btn" id="btnTabBs" onclick="switchTab('bs')">🩸 血糖</button>
+  </div>
+
+  <!-- 血壓表單 -->
+  <div id="formBp">
+    <div class="form-group">
+      <input type="number" id="sys" placeholder="收縮壓 (高)">
+      <input type="number" id="dia" placeholder="舒張壓 (低)">
+    </div>
+    <div class="form-group">
+      <input type="number" id="bpm" placeholder="心跳 (選填)">
+      <select id="bpPeriod">
+        <option value="早上">早上</option>
+        <option value="中午">中午</option>
+        <option value="晚上">晚上</option>
+        <option value="睡前">睡前</option>
+      </select>
+    </div>
+    <button class="submit-btn btn-bp" onclick="saveBP()">儲存血壓資料</button>
+  </div>
+
+  <!-- 血糖表單 -->
+  <div id="formBs" style="display: none;">
+    <div class="form-group single">
+      <input type="number" id="glucose" placeholder="血糖值 (mg/dL)">
+    </div>
+    <div class="form-group single">
+      <select id="bsPeriod">
+        <option value="飯前 (空腹)">飯前 (空腹)</option>
+        <option value="飯後 2 小時">飯後 2 小時</option>
+        <option value="睡前">睡前</option>
+        <option value="隨機">隨機</option>
+      </select>
+    </div>
+    <button class="submit-btn btn-bs" onclick="saveBS()">儲存血糖資料</button>
+  </div>
+
+  <!-- 歷史紀錄列表 -->
+  <div class="history-title">
+    <span id="historyHeading">📊 歷史紀錄 (血壓)</span>
+  </div>
+
+  <!-- 時間篩選按鈕 -->
+  <div class="filter-box">
+    <button class="filter-btn active" id="f-30" onclick="setFilter(30)">近 30 天</button>
+    <button class="filter-btn" id="f-180" onclick="setFilter(180)">近 180 天</button>
+    <button class="filter-btn" id="f-0" onclick="setFilter(0)">全部紀錄</button>
+  </div>
+
+  <div id="historyList">載入中...</div>
+</div>
+
+<!-- 自訂提示視窗 HTML -->
+<div class="modal-overlay" id="customModal">
+  <div class="modal-box">
+    <div class="modal-msg" id="modalMsg">提示訊息</div>
+    <div class="modal-buttons" id="modalButtons">
+      <button class="modal-btn" onclick="closeModal()">確定</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://qttmyftslivdjxhetcjb.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_IzevHVXG4LTgTF3BzLR20g_j12bgO2s';
+
+  let db = null;
+  let currentTab = 'bp';
+  let filterDays = 30;
+
+  // 初始化 Supabase
+  function initSupabase() {
+    if (typeof supabase === 'undefined') {
+      showAlert('網路套件載入失敗，請重新整理網頁！');
+      return false;
+    }
+    if (!SUPABASE_KEY || SUPABASE_KEY.includes('請在此處貼上')) {
+      showAlert('設定未完成：請填入正確的 Supabase ANON Key！');
+      return false;
+    }
+    if (!db) {
+      db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    }
+    return true;
+  }
+
+  // 自訂通用彈窗 (僅提示訊息)
+  function showAlert(msg) {
+    document.getElementById('modalMsg').innerText = msg;
+    document.getElementById('modalButtons').innerHTML = `
+      <button class="modal-btn" onclick="closeModal()">確定</button>
+    `;
+    document.getElementById('customModal').style.display = 'flex';
+  }
+
+  // 自訂確認彈窗 (確認/取消)
+  function showConfirm(msg, onConfirm) {
+    document.getElementById('modalMsg').innerText = msg;
+    document.getElementById('modalButtons').innerHTML = `
+      <button class="modal-btn cancel" onclick="closeModal()">取消</button>
+      <button class="modal-btn danger" id="confirmBtn">刪除</button>
+    `;
+    document.getElementById('confirmBtn').onclick = () => {
+      closeModal();
+      onConfirm();
+    };
+    document.getElementById('customModal').style.display = 'flex';
+  }
+
+  function closeModal() {
+    document.getElementById('customModal').style.display = 'none';
+  }
+
+  // 切換時間篩選
+  function setFilter(days) {
+    filterDays = days;
+    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(`f-${days}`).classList.add('active');
+    loadData();
+  }
+
+  // 切換 Tab 功能
+  function switchTab(type) {
+    currentTab = type;
+    const btnBp = document.getElementById('btnTabBp');
+    const btnBs = document.getElementById('btnTabBs');
+    const formBp = document.getElementById('formBp');
+    const formBs = document.getElementById('formBs');
+    const heading = document.getElementById('historyHeading');
+
+    if (type === 'bp') {
+      btnBp.classList.add('active');
+      btnBs.classList.remove('active');
+      formBp.style.display = 'block';
+      formBs.style.display = 'none';
+      heading.innerText = '📊 歷史紀錄 (血壓)';
+    } else {
+      btnBs.classList.add('active');
+      btnBp.classList.remove('active');
+      formBs.style.display = 'block';
+      formBp.style.display = 'none';
+      heading.innerText = '📊 歷史紀錄 (血糖)';
+    }
+    loadData();
+  }
+
+  // 儲存血壓 (心跳設為選填)
+  async function saveBP() {
+    if (!initSupabase()) return;
+
+    const codeInput = document.getElementById('familyCode');
+    const code = codeInput.value.trim();
+    if (code) localStorage.setItem('user_family_code', code); // 自動儲存代碼
+
+    const sys = parseInt(document.getElementById('sys').value);
+    const dia = parseInt(document.getElementById('dia').value);
+    const bpmValue = document.getElementById('bpm').value.trim();
+    const bpm = bpmValue ? parseInt(bpmValue) : null;
+    const period = document.getElementById('bpPeriod').value;
+
+    if (!code) return showAlert('請輸入家庭代碼！');
+    if (!sys || !dia) return showAlert('請填寫收縮壓與舒張壓！');
+
+    try {
+      const { error } = await db.from('bp_records').insert([
+        { family_code: code, sys: sys, dia: dia, bpm: bpm, period: period }
+      ]);
+
+      if (error) {
+        showAlert('儲存失敗：' + error.message);
+      } else {
+        showAlert('血壓資料已成功儲存！');
+        document.getElementById('sys').value = '';
+        document.getElementById('dia').value = '';
+        document.getElementById('bpm').value = '';
+        loadData();
+      }
+    } catch (e) {
+      showAlert('系統連線異常：' + e.message);
+    }
+  }
+
+  // 儲存血糖
+  async function saveBS() {
+    if (!initSupabase()) return;
+
+    const codeInput = document.getElementById('familyCode');
+    const code = codeInput.value.trim();
+    if (code) localStorage.setItem('user_family_code', code); // 自動儲存代碼
+
+    const glucose = parseInt(document.getElementById('glucose').value);
+    const period = document.getElementById('bsPeriod').value;
+
+    if (!code) return showAlert('請輸入家庭代碼！');
+    if (!glucose) return showAlert('請輸入血糖值！');
+
+    try {
+      const { error } = await db.from('bs_records').insert([
+        { family_code: code, glucose: glucose, period: period }
+      ]);
+
+      if (error) {
+        showAlert('儲存失敗：' + error.message);
+      } else {
+        showAlert('血糖資料已成功儲存！');
+        document.getElementById('glucose').value = '';
+        loadData();
+      }
+    } catch (e) {
+      showAlert('系統連線異常：' + e.message);
+    }
+  }
+
+  // 刪除紀錄函數
+  function confirmDelete(id) {
+    showConfirm('確定要刪除這筆紀錄嗎？\n(刪除後無法復原喔！)', async () => {
+      if (!initSupabase()) return;
+      
+      const tableName = (currentTab === 'bp') ? 'bp_records' : 'bs_records';
+      try {
+        const { error } = await db.from(tableName).delete().eq('id', id);
+        if (error) {
+          showAlert('刪除失敗：' + error.message);
+        } else {
+          loadData();
+        }
+      } catch (e) {
+        showAlert('刪除失敗：' + e.message);
+      }
+    });
+  }
+
+  // 簡化時段標籤顯示（避免過長擠壓）
+  function formatPeriodTag(period) {
+    if (!period) return '一般';
+    if (period.includes('飯前')) return '飯前';
+    if (period.includes('飯後')) return '飯後';
+    return period;
+  }
+
+  // 讀取歷史資料
+  async function loadData() {
+    const listEl = document.getElementById('historyList');
+    if (!initSupabase()) {
+      listEl.innerHTML = '<span style="color:red">金鑰設定未完成，無法讀取資料。</span>';
+      return;
+    }
+
+    const codeInput = document.getElementById('familyCode');
+    let code = codeInput.value.trim();
+
+    // 判斷：若輸入框為空則讀取手機記憶，否則把新的輸入存入手機記憶
+    if (!code) {
+      code = localStorage.getItem('user_family_code') || 'LOVE88';
+      codeInput.value = code;
+    } else {
+      localStorage.setItem('user_family_code', code);
+    }
+
+    listEl.innerHTML = '讀取中...';
+
+    let queryDate = null;
+    if (filterDays > 0) {
+      const d = new Date();
+      d.setDate(d.getDate() - filterDays);
+      queryDate = d.toISOString();
+    }
+
+    try {
+      if (currentTab === 'bp') {
+        let query = db.from('bp_records').select('*').eq('family_code', code);
+        if (queryDate) query = query.gte('created_at', queryDate);
+        
+        const { data, error } = await query.order('created_at', { ascending: false }).limit(100);
+
+        if (error) {
+          listEl.innerHTML = '<span style="color:red">資料讀取失敗：' + error.message + '</span>';
+          return;
+        }
+        if (!data || data.length === 0) {
+          listEl.innerHTML = '此時間範圍內尚無血壓紀錄';
+          return;
+        }
+
+        listEl.innerHTML = data.map(r => {
+          const time = new Date(r.created_at).toLocaleString('zh-TW', { hour12: false, month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+          
+          let status = '<span class="tag bg-normal">正常</span>';
+          if (r.sys >= 140 || r.dia >= 90) status = '<span class="tag bg-danger">偏高</span>';
+          else if (r.sys >= 120 || r.dia >= 80) status = '<span class="tag bg-warn">警戒</span>';
+
+          const periodTag = `<span class="tag bg-period">${formatPeriodTag(r.period)}</span>`;
+          const bpmHtml = r.bpm ? `<div class="record-subdata">心跳：${r.bpm} <small style="font-size: 0.85rem;">BPM</small></div>` : '';
+
+          return `
+            <div class="record-item">
+              <div class="record-header">
+                <span class="record-time">🕒 ${time}</span>
+                <div class="record-tags">
+                  ${periodTag}
+                  ${status}
+                </div>
+              </div>
+              <div class="record-body">
+                <div>
+                  <div class="record-data">
+                    ${r.sys} / ${r.dia} <small style="font-size: 0.9rem;">mmHg</small>
+                  </div>
+                  ${bpmHtml}
+                </div>
+                <button class="delete-btn" onclick="confirmDelete(${r.id})">刪除</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+      } else {
+        let query = db.from('bs_records').select('*').eq('family_code', code);
+        if (queryDate) query = query.gte('created_at', queryDate);
+
+        const { data, error } = await query.order('created_at', { ascending: false }).limit(100);
+
+        if (error) {
+          listEl.innerHTML = '<span style="color:red">資料讀取失敗：' + error.message + '</span>';
+          return;
+        }
+        if (!data || data.length === 0) {
+          listEl.innerHTML = '此時間範圍內尚無血糖紀錄';
+          return;
+        }
+
+        listEl.innerHTML = data.map(r => {
+          const time = new Date(r.created_at).toLocaleString('zh-TW', { hour12: false, month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+          
+          let status = '<span class="tag bg-normal">正常</span>';
+          const g = r.glucose;
+          const isFasting = r.period ? r.period.includes('空腹') : false;
+
+          if (g < 70) {
+            status = '<span class="tag bg-low">偏低</span>';
+          } else if (isFasting) {
+            if (g >= 126) status = '<span class="tag bg-danger">偏高</span>';
+            else if (g >= 100) status = '<span class="tag bg-warn">警戒</span>';
+          } else {
+            if (g >= 200) status = '<span class="tag bg-danger">偏高</span>';
+            else if (g >= 140) status = '<span class="tag bg-warn">警戒</span>';
+          }
+
+          const periodTag = `<span class="tag bg-period">${formatPeriodTag(r.period)}</span>`;
+
+          return `
+            <div class="record-item" style="border-left-color: #e74c3c;">
+              <div class="record-header">
+                <span class="record-time">🕒 ${time}</span>
+                <div class="record-tags">
+                  ${periodTag}
+                  ${status}
+                </div>
+              </div>
+              <div class="record-body">
+                <div class="record-data">
+                  血糖：${r.glucose} <small style="font-size: 0.95rem;">mg/dL</small>
+                </div>
+                <button class="delete-btn" onclick="confirmDelete(${r.id})">刪除</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    } catch (e) {
+      listEl.innerHTML = '<span style="color:red">連線異常：' + e.message + '</span>';
+    }
+  }
+
+  // 網頁載入後自動讀取與設定記憶代碼
+  window.onload = () => {
+    const savedCode = localStorage.getItem('user_family_code');
+    const codeInput = document.getElementById('familyCode');
+    if (savedCode) {
+      codeInput.value = savedCode;
+    } else {
+      codeInput.value = 'LOVE88';
+    }
+    loadData();
+  };
+</script>
+
+</body>
+</html>
