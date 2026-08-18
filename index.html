@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="apple-touch-icon" href="https://i.meee.com.tw/0B09Mdp.png">
+  <link rel="apple-touch-icon" href="https://i.meee.com.tw/0B09Mdp.png">
   <title>專屬健康紀錄</title>
 
   <!-- 載入 Supabase SDK -->
@@ -47,24 +47,30 @@
     .record-data { font-size: 1.35rem; font-weight: bold; color: #111; line-height: 1.4; }
     .record-subdata { font-size: 1.1rem; font-weight: bold; color: #555; margin-top: 2px; }
     
-    /* 純文字刪除按鈕 */
+    /* 4. 刪除按鈕：無紅底、純紅字 */
     .delete-btn {
-      background: #fee2e2;
+      background: transparent;
       color: #dc2626;
       border: none;
-      padding: 8px 14px;
-      border-radius: 8px;
+      padding: 6px 8px;
       font-size: 1rem;
       font-weight: bold;
       cursor: pointer;
       transition: 0.2s;
       white-space: nowrap;
     }
-    .delete-btn:active { background: #fca5a5; }
+    .delete-btn:active { color: #991b1b; }
 
-    /* 標籤樣式優化：防止字體過大排版破裂 */
+    /* 標籤樣式優化 */
     .tag { display: inline-block; padding: 4px 8px; border-radius: 6px; font-size: 0.95rem; color: white; font-weight: bold; white-space: nowrap; }
-    .bg-period { background: #64748b; }
+    
+    /* 2 & 3. 時段標籤色彩設定 */
+    .bg-morning { background: #eab308; color: #1e293b; } /* 明亮黃 (搭配深色字確保視覺清晰) */
+    .bg-evening { background: #2563eb; color: #ffffff; } /* 沉穩藍 */
+    .bg-bedtime { background: #8b5cf6; color: #ffffff; } /* 柔和紫 */
+    .bg-period-default { background: #64748b; color: #ffffff; } /* 預設灰 (用於隨機等其他狀態) */
+
+    /* 健康評估標籤 */
     .bg-normal { background: #2ecc71; }
     .bg-warn { background: #f39c12; }
     .bg-danger { background: #e74c3c; }
@@ -144,9 +150,9 @@
     </div>
     <div class="form-group">
       <input type="number" id="bpm" placeholder="心跳 (選填)">
+      <!-- 1. 拿掉中午選項 -->
       <select id="bpPeriod">
         <option value="早上">早上</option>
-        <option value="中午">中午</option>
         <option value="晚上">晚上</option>
         <option value="睡前">睡前</option>
       </select>
@@ -365,12 +371,27 @@
     });
   }
 
-  // 簡化時段標籤顯示（避免過長擠壓）
-  function formatPeriodTag(period) {
-    if (!period) return '一般';
-    if (period.includes('飯前')) return '飯前';
-    if (period.includes('飯後')) return '飯後';
-    return period;
+  // 2 & 3. 判斷時段並返回對應顏色樣式的 HTML 標籤
+  function renderPeriodTag(period) {
+    if (!period) return '<span class="tag bg-period-default">一般</span>';
+    
+    // 早上 / 飯前 (明亮黃)
+    if (period.includes('早上') || period.includes('飯前')) {
+      const text = period.includes('飯前') ? '飯前' : '早上';
+      return `<span class="tag bg-morning">${text}</span>`;
+    }
+    // 晚上 / 飯後 (沉穩藍)
+    if (period.includes('晚上') || period.includes('飯後')) {
+      const text = period.includes('飯後') ? '飯後' : '晚上';
+      return `<span class="tag bg-evening">${text}</span>`;
+    }
+    // 睡前 (柔和紫)
+    if (period.includes('睡前')) {
+      return `<span class="tag bg-bedtime">睡前</span>`;
+    }
+    
+    // 其他如：隨機或舊有的中午紀錄
+    return `<span class="tag bg-period-default">${period}</span>`;
   }
 
   // 讀取歷史資料
@@ -424,7 +445,7 @@
           if (r.sys >= 140 || r.dia >= 90) status = '<span class="tag bg-danger">偏高</span>';
           else if (r.sys >= 120 || r.dia >= 80) status = '<span class="tag bg-warn">警戒</span>';
 
-          const periodTag = `<span class="tag bg-period">${formatPeriodTag(r.period)}</span>`;
+          const periodTag = renderPeriodTag(r.period);
           const bpmHtml = r.bpm ? `<div class="record-subdata">心跳：${r.bpm} <small style="font-size: 0.85rem;">BPM</small></div>` : '';
 
           return `
@@ -481,7 +502,7 @@
             else if (g >= 140) status = '<span class="tag bg-warn">警戒</span>';
           }
 
-          const periodTag = `<span class="tag bg-period">${formatPeriodTag(r.period)}</span>`;
+          const periodTag = renderPeriodTag(r.period);
 
           return `
             <div class="record-item" style="border-left-color: #e74c3c;">
