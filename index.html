@@ -10,78 +10,109 @@
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-    body { background-color: #f4f6f9; padding: 15px; color: #333; }
-    .card { background: white; border-radius: 16px; padding: 20px; max-width: 480px; margin: 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-    h2 { text-align: center; margin-bottom: 20px; font-size: 1.5rem; color: #2c3e50; }
+    body { background-color: #f8fafc; padding: 15px; color: #334155; }
+    .card { background: white; border-radius: 16px; padding: 20px; max-width: 480px; margin: 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    h2 { text-align: center; margin-bottom: 20px; font-size: 1.5rem; color: #1e293b; }
     
-    .sync-box { display: flex; gap: 8px; margin-bottom: 20px; background: #eef2f7; padding: 10px; border-radius: 10px; }
-    .sync-box input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 1.1rem; text-align: center; font-weight: bold; }
-    .sync-box button { padding: 10px 16px; background: #3498db; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1rem; }
+    .sync-box { display: flex; gap: 8px; margin-bottom: 20px; background: #f1f5f9; padding: 10px; border-radius: 10px; }
+    .sync-box input { flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 1.1rem; text-align: center; font-weight: bold; }
+    .sync-box button { padding: 10px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1rem; }
 
     .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
-    .tab-btn { flex: 1; padding: 12px; border: none; background: #e0e0e0; border-radius: 8px; font-size: 1.15rem; font-weight: bold; cursor: pointer; color: #666; transition: 0.2s; }
-    .tab-btn.active { background: #3498db; color: white; }
+    .tab-btn { flex: 1; padding: 12px; border: none; background: #e2e8f0; border-radius: 8px; font-size: 1.15rem; font-weight: bold; cursor: pointer; color: #64748b; transition: 0.2s; }
+    .tab-btn.active { background: #3b82f6; color: white; }
 
     .form-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
     .form-group.single { grid-template-columns: 1fr; }
-    input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 1.15rem; outline: none; }
-    input:focus, select:focus { border-color: #3498db; }
+    input, select { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1.15rem; outline: none; }
+    input:focus, select:focus { border-color: #3b82f6; }
 
     .submit-btn { width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 1.2rem; font-weight: bold; color: white; cursor: pointer; margin-bottom: 20px; transition: 0.2s; }
-    .btn-bp { background-color: #2ecc71; }
-    .btn-bs { background-color: #e74c3c; }
+    .btn-bp { background-color: #10b981; }
+    .btn-bs { background-color: #ef4444; }
 
     /* 時間篩選按鈕樣式 */
     .filter-box { display: flex; gap: 8px; margin-bottom: 15px; }
     .filter-btn { flex: 1; padding: 10px 0; border: 1px solid #cbd5e1; background: white; border-radius: 8px; font-size: 1.05rem; color: #475569; cursor: pointer; text-align: center; font-weight: bold; }
     .filter-btn.active { background: #475569; color: white; border-color: #475569; }
 
-    .history-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 2px solid #eee; display: flex; justify-content: space-between; }
-    .record-item { background: #f8f9fa; padding: 14px; border-radius: 10px; margin-bottom: 10px; border-left: 5px solid #3498db; }
+    .history-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 2px solid #f1f5f9; display: flex; justify-content: space-between; }
     
-    /* 紀錄卡片頂部排版優化：自動彈性適應窄螢幕 */
-    .record-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; color: #2c3e50; font-size: 1.05rem; font-weight: bold; margin-bottom: 8px; }
-    .record-time { white-space: nowrap; }
-    .record-tags { display: flex; gap: 4px; align-items: center; flex-wrap: nowrap; }
-    .record-body { display: flex; justify-content: space-between; align-items: center; }
-    .record-data { font-size: 1.35rem; font-weight: bold; color: #111; line-height: 1.4; }
-    .record-subdata { font-size: 1.1rem; font-weight: bold; color: #555; margin-top: 2px; }
+    /* 方案 3：卡片佈局（左側粗色塊 + 直寫文字） */
+    .record-item {
+      display: flex;
+      background: #ffffff;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      border: 1px solid #e2e8f0;
+      overflow: hidden;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+    }
     
-    /* 4. 刪除按鈕：無紅底、純紅字 */
+    /* 左側直式加粗時段區塊 */
+    .period-bar {
+      width: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 1.15rem;
+      writing-mode: vertical-lr; /* 直式文字 */
+      letter-spacing: 3px;
+      flex-shrink: 0;
+    }
+
+    /* 時段配色：柔和琥珀橘 (早上) + 質感霧藍 (晚上) + 柔紫 (睡前) */
+    .bar-morning { background-color: #f59e0b; color: #ffffff; }  /* 晨光橘 */
+    .bar-evening { background-color: #475569; color: #ffffff; }  /* 夜晚藍灰 */
+    .bar-bedtime { background-color: #7c3aed; color: #ffffff; }  /* 深紫色 */
+    .bar-default { background-color: #64748b; color: #ffffff; }
+
+    /* 卡片內容區 */
+    .record-content {
+      flex: 1;
+      padding: 12px 14px;
+    }
+    
+    .record-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .record-time { color: #1e293b; font-size: 1.05rem; font-weight: bold; display: flex; align-items: center; gap: 6px; }
+    .record-body { display: flex; justify-content: space-between; align-items: flex-end; }
+    .record-data { font-size: 1.35rem; font-weight: bold; color: #0f172a; line-height: 1.3; }
+    
+    /* 淡化刪除按鈕 */
     .delete-btn {
       background: transparent;
-      color: #dc2626;
+      color: #94a3b8;
       border: none;
-      padding: 6px 8px;
-      font-size: 1rem;
-      font-weight: bold;
+      padding: 2px 4px;
+      font-size: 0.95rem;
+      font-weight: 500;
       cursor: pointer;
       transition: 0.2s;
-      white-space: nowrap;
     }
-    .delete-btn:active { color: #991b1b; }
+    .delete-btn:hover, .delete-btn:active { color: #ef4444; }
 
-    /* 標籤樣式優化 */
-    .tag { display: inline-block; padding: 4px 8px; border-radius: 6px; font-size: 0.95rem; color: white; font-weight: bold; white-space: nowrap; }
-    
-    /* 2 & 3. 時段標籤色彩設定 */
-    .bg-morning { background: #eab308; color: #1e293b; } /* 明亮黃 (搭配深色字確保視覺清晰) */
-    .bg-evening { background: #2563eb; color: #ffffff; } /* 沉穩藍 */
-    .bg-bedtime { background: #8b5cf6; color: #ffffff; } /* 柔和紫 */
-    .bg-period-default { background: #64748b; color: #ffffff; } /* 預設灰 (用於隨機等其他狀態) */
+    /* 右上角健康評估標籤（回復原本的警戒橘黃色實色膠囊） */
+    .tag {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: bold;
+      white-space: nowrap;
+      color: #ffffff;
+    }
+    .bg-normal { background-color: #10b981; }  /* 正常綠 */
+    .bg-warn { background-color: #f39c12; }    /* 原本的警戒橘黃色 */
+    .bg-danger { background-color: #ef4444; }  /* 偏高紅 */
+    .bg-low { background-color: #0284c7; }     /* 低血糖藍 */
 
-    /* 健康評估標籤 */
-    .bg-normal { background: #2ecc71; }
-    .bg-warn { background: #f39c12; }
-    .bg-danger { background: #e74c3c; }
-    .bg-low { background: #3498db; }
-
-    /* 自訂大字體提示彈窗 (Modal) */
+    /* 自訂提示視窗 */
     .modal-overlay {
       display: none;
       position: fixed;
       top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.6);
+      background: rgba(0, 0, 0, 0.5);
       justify-content: center;
       align-items: center;
       z-index: 1000;
@@ -93,36 +124,19 @@
       width: 85%;
       max-width: 360px;
       text-align: center;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
     }
     .modal-msg {
-      font-size: 1.3rem;
+      font-size: 1.25rem;
       font-weight: bold;
-      color: #2c3e50;
+      color: #1e293b;
       margin-bottom: 20px;
       line-height: 1.5;
     }
-    .modal-buttons {
-      display: flex;
-      gap: 10px;
-    }
-    .modal-btn {
-      flex: 1;
-      padding: 12px;
-      background: #3498db;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 1.2rem;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    .modal-btn.cancel {
-      background: #94a3b8;
-    }
-    .modal-btn.danger {
-      background: #e74c3c;
-    }
+    .modal-buttons { display: flex; gap: 10px; }
+    .modal-btn { flex: 1; padding: 12px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-size: 1.15rem; font-weight: bold; cursor: pointer; }
+    .modal-btn.cancel { background: #94a3b8; }
+    .modal-btn.danger { background: #ef4444; }
   </style>
 </head>
 <body>
@@ -150,7 +164,6 @@
     </div>
     <div class="form-group">
       <input type="number" id="bpm" placeholder="心跳 (選填)">
-      <!-- 1. 拿掉中午選項 -->
       <select id="bpPeriod">
         <option value="早上">早上</option>
         <option value="晚上">晚上</option>
@@ -209,7 +222,6 @@
   let currentTab = 'bp';
   let filterDays = 30;
 
-  // 初始化 Supabase
   function initSupabase() {
     if (typeof supabase === 'undefined') {
       showAlert('網路套件載入失敗，請重新整理網頁！');
@@ -225,7 +237,6 @@
     return true;
   }
 
-  // 自訂通用彈窗 (僅提示訊息)
   function showAlert(msg) {
     document.getElementById('modalMsg').innerText = msg;
     document.getElementById('modalButtons').innerHTML = `
@@ -234,7 +245,6 @@
     document.getElementById('customModal').style.display = 'flex';
   }
 
-  // 自訂確認彈窗 (確認/取消)
   function showConfirm(msg, onConfirm) {
     document.getElementById('modalMsg').innerText = msg;
     document.getElementById('modalButtons').innerHTML = `
@@ -252,7 +262,6 @@
     document.getElementById('customModal').style.display = 'none';
   }
 
-  // 切換時間篩選
   function setFilter(days) {
     filterDays = days;
     document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
@@ -260,7 +269,6 @@
     loadData();
   }
 
-  // 切換 Tab 功能
   function switchTab(type) {
     currentTab = type;
     const btnBp = document.getElementById('btnTabBp');
@@ -285,13 +293,12 @@
     loadData();
   }
 
-  // 儲存血壓 (心跳設為選填)
   async function saveBP() {
     if (!initSupabase()) return;
 
     const codeInput = document.getElementById('familyCode');
     const code = codeInput.value.trim();
-    if (code) localStorage.setItem('user_family_code', code); // 自動儲存代碼
+    if (code) localStorage.setItem('user_family_code', code);
 
     const sys = parseInt(document.getElementById('sys').value);
     const dia = parseInt(document.getElementById('dia').value);
@@ -321,13 +328,12 @@
     }
   }
 
-  // 儲存血糖
   async function saveBS() {
     if (!initSupabase()) return;
 
     const codeInput = document.getElementById('familyCode');
     const code = codeInput.value.trim();
-    if (code) localStorage.setItem('user_family_code', code); // 自動儲存代碼
+    if (code) localStorage.setItem('user_family_code', code);
 
     const glucose = parseInt(document.getElementById('glucose').value);
     const period = document.getElementById('bsPeriod').value;
@@ -352,7 +358,6 @@
     }
   }
 
-  // 刪除紀錄函數
   function confirmDelete(id) {
     showConfirm('確定要刪除這筆紀錄嗎？\n(刪除後無法復原喔！)', async () => {
       if (!initSupabase()) return;
@@ -371,30 +376,21 @@
     });
   }
 
-  // 2 & 3. 判斷時段並返回對應顏色樣式的 HTML 標籤
-  function renderPeriodTag(period) {
-    if (!period) return '<span class="tag bg-period-default">一般</span>';
-    
-    // 早上 / 飯前 (明亮黃)
+  // 取得左側時段粗邊框 Class 與直寫文字
+  function getPeriodStyle(period) {
+    if (!period) return { class: 'bar-default', text: '一般' };
     if (period.includes('早上') || period.includes('飯前')) {
-      const text = period.includes('飯前') ? '飯前' : '早上';
-      return `<span class="tag bg-morning">${text}</span>`;
+      return { class: 'bar-morning', text: period.includes('飯前') ? '飯前' : '早上' };
     }
-    // 晚上 / 飯後 (沉穩藍)
     if (period.includes('晚上') || period.includes('飯後')) {
-      const text = period.includes('飯後') ? '飯後' : '晚上';
-      return `<span class="tag bg-evening">${text}</span>`;
+      return { class: 'bar-evening', text: period.includes('飯後') ? '飯後' : '晚上' };
     }
-    // 睡前 (柔和紫)
     if (period.includes('睡前')) {
-      return `<span class="tag bg-bedtime">睡前</span>`;
+      return { class: 'bar-bedtime', text: '睡前' };
     }
-    
-    // 其他如：隨機或舊有的中午紀錄
-    return `<span class="tag bg-period-default">${period}</span>`;
+    return { class: 'bar-default', text: period };
   }
 
-  // 讀取歷史資料
   async function loadData() {
     const listEl = document.getElementById('historyList');
     if (!initSupabase()) {
@@ -405,7 +401,6 @@
     const codeInput = document.getElementById('familyCode');
     let code = codeInput.value.trim();
 
-    // 判斷：若輸入框為空則讀取手機記憶，否則把新的輸入存入手機記憶
     if (!code) {
       code = localStorage.getItem('user_family_code') || 'LOVE88';
       codeInput.value = code;
@@ -439,32 +434,33 @@
         }
 
         listEl.innerHTML = data.map(r => {
-          const time = new Date(r.created_at).toLocaleString('zh-TW', { hour12: false, month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+          const dateObj = new Date(r.created_at);
+          const timeStr = dateObj.toLocaleString('zh-TW', { hour12: false, month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
           
           let status = '<span class="tag bg-normal">正常</span>';
           if (r.sys >= 140 || r.dia >= 90) status = '<span class="tag bg-danger">偏高</span>';
           else if (r.sys >= 120 || r.dia >= 80) status = '<span class="tag bg-warn">警戒</span>';
 
-          const periodTag = renderPeriodTag(r.period);
-          const bpmHtml = r.bpm ? `<div class="record-subdata">心跳：${r.bpm} <small style="font-size: 0.85rem;">BPM</small></div>` : '';
+          const periodInfo = getPeriodStyle(r.period);
+          const bpmHtml = r.bpm ? `<div style="font-size: 0.95rem; color: #64748b; margin-top: 2px;">心跳：${r.bpm} <small>BPM</small></div>` : '';
 
           return `
             <div class="record-item">
-              <div class="record-header">
-                <span class="record-time">🕒 ${time}</span>
-                <div class="record-tags">
-                  ${periodTag}
+              <div class="period-bar ${periodInfo.class}">${periodInfo.text}</div>
+              <div class="record-content">
+                <div class="record-header">
+                  <span class="record-time">🕒 ${timeStr}</span>
                   ${status}
                 </div>
-              </div>
-              <div class="record-body">
-                <div>
-                  <div class="record-data">
-                    ${r.sys} / ${r.dia} <small style="font-size: 0.9rem;">mmHg</small>
+                <div class="record-body">
+                  <div>
+                    <div class="record-data">
+                      ${r.sys} / ${r.dia} <small style="font-size: 0.85rem; color: #64748b;">mmHg</small>
+                    </div>
+                    ${bpmHtml}
                   </div>
-                  ${bpmHtml}
+                  <button class="delete-btn" onclick="confirmDelete(${r.id})">刪除</button>
                 </div>
-                <button class="delete-btn" onclick="confirmDelete(${r.id})">刪除</button>
               </div>
             </div>
           `;
@@ -486,7 +482,8 @@
         }
 
         listEl.innerHTML = data.map(r => {
-          const time = new Date(r.created_at).toLocaleString('zh-TW', { hour12: false, month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+          const dateObj = new Date(r.created_at);
+          const timeStr = dateObj.toLocaleString('zh-TW', { hour12: false, month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
           
           let status = '<span class="tag bg-normal">正常</span>';
           const g = r.glucose;
@@ -502,22 +499,22 @@
             else if (g >= 140) status = '<span class="tag bg-warn">警戒</span>';
           }
 
-          const periodTag = renderPeriodTag(r.period);
+          const periodInfo = getPeriodStyle(r.period);
 
           return `
-            <div class="record-item" style="border-left-color: #e74c3c;">
-              <div class="record-header">
-                <span class="record-time">🕒 ${time}</span>
-                <div class="record-tags">
-                  ${periodTag}
+            <div class="record-item">
+              <div class="period-bar ${periodInfo.class}">${periodInfo.text}</div>
+              <div class="record-content">
+                <div class="record-header">
+                  <span class="record-time">🕒 ${timeStr}</span>
                   ${status}
                 </div>
-              </div>
-              <div class="record-body">
-                <div class="record-data">
-                  血糖：${r.glucose} <small style="font-size: 0.95rem;">mg/dL</small>
+                <div class="record-body">
+                  <div class="record-data">
+                    血糖：${r.glucose} <small style="font-size: 0.85rem; color: #64748b;">mg/dL</small>
+                  </div>
+                  <button class="delete-btn" onclick="confirmDelete(${r.id})">刪除</button>
                 </div>
-                <button class="delete-btn" onclick="confirmDelete(${r.id})">刪除</button>
               </div>
             </div>
           `;
@@ -528,7 +525,6 @@
     }
   }
 
-  // 網頁載入後自動讀取與設定記憶代碼
   window.onload = () => {
     const savedCode = localStorage.getItem('user_family_code');
     const codeInput = document.getElementById('familyCode');
