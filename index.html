@@ -4,12 +4,37 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <!-- App 圖示設定 (同時支援 iOS 與 Android) -->
-  <link rel="apple-touch-icon" href="https://i.meee.com.tw/0B09Mdp.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="https://i.meee.com.tw/0B09Mdp.png">
-  <link rel="shortcut icon" href="https://i.meee.com.tw/0B09Mdp.png">
-  
   <title>專屬健康紀錄</title>
+
+  <!-- iOS / Apple 系統圖示 (Base64 內嵌) -->
+  <link rel="apple-touch-icon" href="https://i.meee.com.tw/0B09Mdp.png">
+
+  <!-- 一般 Favicon 宣告 -->
+  <link rel="icon" type="image/png" href="https://i.meee.com.tw/0B09Mdp.png">
+
+  <!-- Android / Chrome 專用：Web App Manifest (使用 Base64 內嵌，徹底解決 CORS 與圖床失效問題) -->
+  <link rel="manifest" href='data:application/manifest+json;charset=utf-8,{
+    "name": "專屬健康紀錄",
+    "short_name": "健康紀錄",
+    "start_url": "./",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#3b82f6",
+    "icons": [
+      {
+        "src": "https://i.meee.com.tw/0B09Mdp.png",
+        "sizes": "192x192",
+        "type": "image/png",
+        "purpose": "any"
+      },
+      {
+        "src": "https://i.meee.com.tw/0B09Mdp.png",
+        "sizes": "512x512",
+        "type": "image/png",
+        "purpose": "any"
+      }
+    ]
+  }'>
 
   <!-- 載入 Supabase SDK -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
