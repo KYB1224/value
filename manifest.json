@@ -1,19 +1,19 @@
 {
   "name": "專屬健康紀錄",
-  "short_name": "專屬健康",
+  "short_name": "健康紀錄",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#ffffff",
+  "background_color": "#022982",
+  "theme_color": "#022982",
   "icons": [
     {
-      "src": "https://i.postimg.cc/RV67748d/0B09Mdp.png",
+      "src": "https://i.postimg.cc/BZBSmV8y/0B09Mdp.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "https://i.postimg.cc/RV67748d/0B09Mdp.png",
+      "src": "https://i.postimg.cc/BZBSmV8y/0B09Mdp.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
