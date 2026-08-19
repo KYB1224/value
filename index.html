@@ -5,9 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>專屬健康紀錄</title>
 
-  <!-- 標準網頁與桌面圖示宣告 -->
-  <link rel="icon" type="image/png" sizes="192x192" href="https://i.meee.com.tw/0B09Mdp.png">
+  <!-- iOS / Apple 設備圖示 -->
   <link rel="apple-touch-icon" href="https://i.meee.com.tw/0B09Mdp.png">
+  
+  <!-- 標準 Favicon -->
+  <link rel="icon" type="image/png" sizes="192x192" href="https://i.meee.com.tw/0B09Mdp.png">
+
+  <!-- Android PWA Manifest (標準 JSON 格式，修正跨域解析) -->
+  <link rel="manifest" href='data:application/manifest+json;utf8,{"name":"專屬健康紀錄","short_name":"健康紀錄","start_url":"./","display":"standalone","background_color":"#ffffff","theme_color":"#3b82f6","icons":[{"src":"https://i.meee.com.tw/0B09Mdp.png","sizes":"192x192 512x512","type":"image/png"}]}'>
 
   <!-- 載入 Supabase SDK -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
@@ -393,13 +398,12 @@
               <div class="period-bar ${periodInfo.class}">${periodInfo.text}</div>
               <div class="record-content">
                 <div class="record-header">
-                  <span class="record-time">🕒 ${timeStr}</span>
-                  ${status}
+                  <span class="record-time">🕒 ${timeStr}</span>${status}
                 </div>
                 <div class="record-body">
                   <div>
                     <div class="record-data">
-                      ${r.sys} / ${r.dia} <small style="font-size: 0.85rem; color: #64748b;">mmHg</small>
+                      ${r.sys} /${r.dia} <small style="font-size: 0.85rem; color: #64748b;">mmHg</small>
                     </div>
                     ${bpmHtml}
                   </div>
@@ -450,8 +454,7 @@
               <div class="period-bar ${periodInfo.class}">${periodInfo.text}</div>
               <div class="record-content">
                 <div class="record-header">
-                  <span class="record-time">🕒 ${timeStr}</span>
-                  ${status}
+                  <span class="record-time">🕒 ${timeStr}</span>${status}
                 </div>
                 <div class="record-body">
                   <div class="record-data">
