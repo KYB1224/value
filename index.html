@@ -9,8 +9,8 @@
   <link rel="apple-touch-icon" href="https://i.meee.com.tw/0B09Mdp.png">
   <link rel="icon" type="image/png" sizes="192x192" href="https://i.meee.com.tw/0B09Mdp.png">
 
-  <!-- Android Chrome PWA 獨立 App 宣告（指定精美盾牌愛心血滴圖示） -->
-  <link rel="manifest" href='data:application/manifest+json,{"name":"專屬健康紀錄","short_name":"健康紀錄","start_url":".","display":"standalone","background_color":"#f8fafc","theme_color":"#3b82f6","icons":[{"src":"https://i.meee.com.tw/0B09Mdp.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},{"src":"https://i.meee.com.tw/0B09Mdp.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}]}'>
+  <!-- 引入標準 PWA Manifest -->
+  <link rel="manifest" href="manifest.json">
 
   <!-- 載入 Supabase SDK -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
@@ -37,14 +37,12 @@
     .btn-bp { background-color: #10b981; }
     .btn-bs { background-color: #ef4444; }
 
-    /* 時間篩選按鈕樣式 */
     .filter-box { display: flex; gap: 8px; margin-bottom: 15px; }
     .filter-btn { flex: 1; padding: 10px 0; border: 1px solid #cbd5e1; background: white; border-radius: 8px; font-size: 1.05rem; color: #475569; cursor: pointer; text-align: center; font-weight: bold; }
     .filter-btn.active { background: #475569; color: white; border-color: #475569; }
 
     .history-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 2px solid #f1f5f9; display: flex; justify-content: space-between; }
     
-    /* 卡片佈局（左側粗色塊 + 直寫文字） */
     .record-item {
       display: flex;
       background: #ffffff;
@@ -72,11 +70,7 @@
     .bar-bedtime { background-color: #7c3aed; color: #ffffff; }
     .bar-default { background-color: #64748b; color: #ffffff; }
 
-    .record-content {
-      flex: 1;
-      padding: 12px 14px;
-    }
-    
+    .record-content { flex: 1; padding: 12px 14px; }
     .record-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
     .record-time { color: #1e293b; font-size: 1.05rem; font-weight: bold; display: flex; align-items: center; gap: 6px; }
     .record-body { display: flex; justify-content: space-between; align-items: flex-end; }
@@ -144,19 +138,16 @@
 <div class="card">
   <h2>專屬健康紀錄</h2>
 
-  <!-- 家庭代碼同步 -->
   <div class="sync-box">
     <input type="text" id="familyCode" placeholder="請輸入家庭代碼">
     <button onclick="loadData()">同步</button>
   </div>
 
-  <!-- 分頁按鈕 -->
   <div class="tabs">
     <button class="tab-btn active" id="btnTabBp" onclick="switchTab('bp')">❤️ 血壓</button>
     <button class="tab-btn" id="btnTabBs" onclick="switchTab('bs')">🩸 血糖</button>
   </div>
 
-  <!-- 血壓表單 -->
   <div id="formBp">
     <div class="form-group">
       <input type="number" id="sys" placeholder="收縮壓 (高)">
@@ -173,7 +164,6 @@
     <button class="submit-btn btn-bp" onclick="saveBP()">儲存血壓資料</button>
   </div>
 
-  <!-- 血糖表單 -->
   <div id="formBs" style="display: none;">
     <div class="form-group single">
       <input type="number" id="glucose" placeholder="血糖值 (mg/dL)">
@@ -189,12 +179,10 @@
     <button class="submit-btn btn-bs" onclick="saveBS()">儲存血糖資料</button>
   </div>
 
-  <!-- 歷史紀錄列表 -->
   <div class="history-title">
     <span id="historyHeading">📊 歷史紀錄 (血壓)</span>
   </div>
 
-  <!-- 時間篩選按鈕 -->
   <div class="filter-box">
     <button class="filter-btn active" id="f-30" onclick="setFilter(30)">近 30 天</button>
     <button class="filter-btn" id="f-180" onclick="setFilter(180)">近 180 天</button>
@@ -204,7 +192,6 @@
   <div id="historyList">載入中...</div>
 </div>
 
-<!-- 自訂提示視窗 HTML -->
 <div class="modal-overlay" id="customModal">
   <div class="modal-box">
     <div class="modal-msg" id="modalMsg">提示訊息</div>
