@@ -4,17 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <!-- 直接將藍底圖示內嵌為 Base64，不靠外部網址，Android 必抓 -->
-  <link rel="icon" type="image/png" sizes="192x192" href="https://i.postimg.cc/85zP39x9/app-icon-maskable.png">
-  <link rel="apple-touch-icon" href="https://i.postimg.cc/85zP39x9/app-icon-maskable.png">
+  <!-- 引入 Manifest 檔（Android Chrome 抓取桌面圖示的核心依據） -->
+  <link rel="manifest" href="manifest.json">
 
-  <!-- 動態生成內嵌 Manifest，避免檔名路徑錯亂 -->
-  <link rel="manifest" id="manifest-placeholder">
+  <!-- 標準圖示標籤 -->
+  <link rel="icon" type="image/png" sizes="192x192" href="https://i.postimg.cc/BZBSmV8y/0B09Mdp.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="https://i.postimg.cc/BZBSmV8y/0B09Mdp.png">
+  <link rel="apple-touch-icon" href="https://i.postimg.cc/BZBSmV8y/0B09Mdp.png">
 
-  <meta name="theme-color" content="#3366cc">
+  <meta name="theme-color" content="#3b82f6">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="application-name" content="健康紀錄">
 
   <title>專屬健康紀錄</title>
 
@@ -142,34 +142,6 @@
     .modal-btn.cancel { background: #94a3b8; }
     .modal-btn.danger { background: #ef4444; }
   </style>
-
-  <script>
-    // 自動生成內嵌 Manifest 資料，不依賴外部 json 檔
-    const manifestData = {
-      "name": "健康紀錄",
-      "short_name": "健康紀錄",
-      "start_url": ".",
-      "display": "standalone",
-      "background_color": "#3366cc",
-      "theme_color": "#3366cc",
-      "icons": [
-        {
-          "src": "https://i.postimg.cc/85zP39x9/app-icon-maskable.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        },
-        {
-          "src": "https://i.postimg.cc/85zP39x9/app-icon-maskable.png",
-          "sizes": "512x512",
-          "type": "image/png"
-        }
-      ]
-    };
-    const stringManifest = JSON.stringify(manifestData);
-    const blob = new Blob([stringManifest], {type: 'application/json'});
-    const manifestURL = URL.createObjectURL(blob);
-    document.write('<link rel="manifest" href="' + manifestURL + '">');
-  </script>
 </head>
 <body>
 
@@ -312,7 +284,7 @@
       btnBs.classList.add('active');
       btnBp.classList.remove('active');
       formBs.style.display = 'block';
-      formBs.style.display = 'none';
+      formBp.style.display = 'none';
       heading.innerText = '📊 歷史紀錄 (血糖)';
     }
     loadData();
