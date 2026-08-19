@@ -8,10 +8,12 @@
   <!-- iOS / Safari 圖示 -->
   <link rel="apple-touch-icon" href="https://i.meee.com.tw/0B09Mdp.png">
   <link rel="icon" type="image/png" sizes="192x192" href="https://i.meee.com.tw/0B09Mdp.png">
-  <link rel="icon" type="image/png" sizes="512x512" href="https://i.meee.com.tw/0B09Mdp.png">
 
-  <!-- Android / Chrome PWA 內嵌 Manifest（包含原始圖示與 Base64 備援） -->
-  <link rel="manifest" href='data:application/manifest+json;utf8,{"name":"專屬健康紀錄","short_name":"健康紀錄","start_url":"./?v=2","display":"standalone","background_color":"#f8fafc","theme_color":"#3b82f6","icons":[{"src":"https://i.meee.com.tw/0B09Mdp.png","sizes":"192x192","type":"image/png","purpose":"any"},{"src":"https://i.meee.com.tw/0B09Mdp.png","sizes":"512x512","type":"image/png","purpose":"any"},{"src":"data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 512 512\"><rect width=\"512\" height=\"512\" rx=\"100\" fill=\"%233b82f6\"/><path fill=\"white\" d=\"M256 380l-22-20C156 290 100 240 100 176c0-52 40-92 92-92 30 0 58 14 64 36 6-22 34-36 64-36 52 0 92 40 92 92 0 64-56 114-134 184l-22 20z\"/></svg>","sizes":"192x192 512x512","type":"image/svg+xml","purpose":"maskable"}]}'>
+  <!-- PWA 主圖示：直接將心形 SVG 向量轉為內嵌 Data URI（徹底免去外部圖片跨域問題） -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%233b82f6'/><path fill='white' d='M256 380l-22-20C156 290 100 240 100 176c0-52 40-92 92-92 30 0 58 14 64 36 6-22 34-36 64-36 52 0 92 40 92 92 0 64-56 114-134 184l-22 20z'/></svg>">
+
+  <!-- 修正後的 Manifest 設定 -->
+  <link rel="manifest" href='data:application/manifest+json;utf8,{"name":"專屬健康紀錄","short_name":"健康紀錄","start_url":"./?v=3","display":"standalone","background_color":"#f8fafc","theme_color":"#3b82f6","icons":[{"src":"data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 512 512\"><rect width=\"512\" height=\"512\" rx=\"100\" fill=\"%233b82f6\"/><path fill=\"white\" d=\"M256 380l-22-20C156 290 100 240 100 176c0-52 40-92 92-92 30 0 58 14 64 36 6-22 34-36 64-36 52 0 92 40 92 92 0 64-56 114-134 184l-22 20z\"/></svg>","sizes":"192x192 512x512","type":"image/svg+xml","purpose":"any"}]}'>
 
   <!-- 載入 Supabase SDK -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
