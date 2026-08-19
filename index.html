@@ -5,14 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>專屬健康紀錄</title>
 
-  <!-- iOS / Apple 設備圖示 -->
-  <link rel="apple-touch-icon" href="https://i.meee.com.tw/0B09Mdp.png">
+  <!-- 直接使用 Base64 內嵌藍色護盾圖示，徹底擺脫外部圖片請求失敗問題 -->
+  <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%233b82f6'/><path d='M256 80 L380 140 V240 C380 330 320 400 256 430 C192 400 132 330 132 240 V140 Z' fill='%23ffffff'/><path d='M256 120 L350 165 V240 C350 310 300 370 256 395 C212 370 162 310 162 240 V165 Z' fill='%231d4ed8'/><path d='M230 270 L200 240 L180 260 L230 310 L330 210 L310 190 Z' fill='%23ffffff'/></svg>">
   
-  <!-- 標準 Favicon -->
-  <link rel="icon" type="image/png" sizes="192x192" href="https://i.meee.com.tw/0B09Mdp.png">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%233b82f6'/><path d='M256 80 L380 140 V240 C380 330 320 400 256 430 C192 400 132 330 132 240 V140 Z' fill='%23ffffff'/><path d='M256 120 L350 165 V240 C350 310 300 370 256 395 C212 370 162 310 162 240 V165 Z' fill='%231d4ed8'/><path d='M230 270 L200 240 L180 260 L230 310 L330 210 L310 190 Z' fill='%23ffffff'/></svg>">
 
-  <!-- Android PWA Manifest (標準 JSON 格式，修正跨域解析) -->
-  <link rel="manifest" href='data:application/manifest+json;utf8,{"name":"專屬健康紀錄","short_name":"健康紀錄","start_url":"./","display":"standalone","background_color":"#ffffff","theme_color":"#3b82f6","icons":[{"src":"https://i.meee.com.tw/0B09Mdp.png","sizes":"192x192 512x512","type":"image/png"}]}'>
+  <link rel="manifest" href='data:application/manifest+json;utf8,{"name":"專屬健康紀錄","short_name":"健康紀錄","start_url":"./","display":"standalone","background_color":"#3b82f6","theme_color":"#3b82f6","icons":[{"src":"data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 512 512%22><rect width=%22512%22 height=%22512%22 rx=%22100%22 fill=%22%233b82f6%22/><path d=%22M256 80 L380 140 V240 C380 330 320 400 256 430 C192 400 132 330 132 240 V140 Z%22 fill=%22%23ffffff%22/><path d=%22M256 120 L350 165 V240 C350 310 300 370 256 395 C212 370 162 310 162 240 V165 Z%22 fill=%22%231d4ed8%22/><path d=%22M230 270 L200 240 L180 260 L230 310 L330 210 L310 190 Z%22 fill=%22%23ffffff%22/></svg>","sizes":"512x512","type":"image/svg+xml","purpose":"any maskable"}]}'>
 
   <!-- 載入 Supabase SDK -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
@@ -398,12 +396,13 @@
               <div class="period-bar ${periodInfo.class}">${periodInfo.text}</div>
               <div class="record-content">
                 <div class="record-header">
-                  <span class="record-time">🕒 ${timeStr}</span>${status}
+                  <span class="record-time">🕒 ${timeStr}</span>
+                  ${status}
                 </div>
                 <div class="record-body">
                   <div>
                     <div class="record-data">
-                      ${r.sys} /${r.dia} <small style="font-size: 0.85rem; color: #64748b;">mmHg</small>
+                      ${r.sys} / ${r.dia} <small style="font-size: 0.85rem; color: #64748b;">mmHg</small>
                     </div>
                     ${bpmHtml}
                   </div>
@@ -454,7 +453,8 @@
               <div class="period-bar ${periodInfo.class}">${periodInfo.text}</div>
               <div class="record-content">
                 <div class="record-header">
-                  <span class="record-time">🕒 ${timeStr}</span>${status}
+                  <span class="record-time">🕒 ${timeStr}</span>
+                  ${status}
                 </div>
                 <div class="record-body">
                   <div class="record-data">
