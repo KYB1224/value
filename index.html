@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <!-- Manifest 檔（Android Chrome 抓取桌面圖示的核心依據） -->
-  <link rel="manifest" href="manifest.json">
+  <!-- 將 Manifest 直接內嵌至 HTML 中，徹底解決 404 / 讀取失敗問題 -->
+  <link rel="manifest" href='data:application/manifest+json,{"name":"專屬健康紀錄","short_name":"健康紀錄","start_url":"./","display":"standalone","background_color":"#3366cc","theme_color":"#3366cc","icons":[{"src":"https://i.postimg.cc/85zP39x9/app-icon-maskable.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},{"src":"https://i.postimg.cc/85zP39x9/app-icon-maskable.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}]}'>
 
   <!-- 滿版無白邊圖示標籤 -->
   <link rel="icon" type="image/png" sizes="192x192" href="https://i.postimg.cc/85zP39x9/app-icon-maskable.png">
