@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <!-- 引入 Manifest 檔（Android Chrome 抓取桌面圖示的核心依據） -->
+  <!-- 引入 Manifest 檔 -->
   <link rel="manifest" href="manifest.json">
 
   <!-- 標準圖示標籤 -->
@@ -23,8 +23,46 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
     body { background-color: #f8fafc; padding: 15px; color: #334155; }
-    .card { background: white; border-radius: 16px; padding: 20px; max-width: 480px; margin: 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-    h2 { text-align: center; margin-bottom: 20px; font-size: 1.5rem; color: #1e293b; }
+    
+    /* 設定卡片容器為相對定位，方便定位右上角關閉按鈕 */
+    .card { 
+      position: relative; 
+      background: white; 
+      border-radius: 16px; 
+      padding: 20px; 
+      max-width: 480px; 
+      margin: 0 auto; 
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
+    }
+    
+    /* 右上角圓形關閉按鈕樣式 */
+    .close-btn {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background-color: #f1f5f9;
+      color: #64748b;
+      border: 1px solid #cbd5e1;
+      font-size: 1.2rem;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      line-height: 1;
+      z-index: 10;
+    }
+    .close-btn:active {
+      background-color: #e2e8f0;
+      color: #0f172a;
+      transform: scale(0.92);
+    }
+
+    h2 { text-align: center; margin-bottom: 20px; font-size: 1.5rem; color: #1e293b; padding-right: 30px; }
     
     .sync-box { display: flex; gap: 8px; margin-bottom: 20px; background: #f1f5f9; padding: 10px; border-radius: 10px; }
     .sync-box input { flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 1.1rem; text-align: center; font-weight: bold; }
@@ -146,6 +184,9 @@
 <body>
 
 <div class="card">
+  <!-- 右上角圓形關閉按鈕 -->
+  <button class="close-btn" onclick="closeApp()" title="關閉程式">✕</button>
+
   <h2>專屬健康紀錄</h2>
 
   <div class="sync-box">
@@ -232,6 +273,20 @@
       db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     }
     return true;
+  }
+
+  // 關閉 App 邏輯
+  function closeApp() {
+    // 嘗試透過分頁關閉或返回
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      window.close();
+    }
+    // 若為獨立全螢幕 PWA，瀏覽器限制無法直接閉合視窗，跳出引導提示
+    setTimeout(() => {
+      showAlert('請由螢幕底部向上滑動，或按下主畫面按鈕即可離開應用程式喔！');
+    }, 300);
   }
 
   function showAlert(msg) {
