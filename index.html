@@ -531,7 +531,7 @@
     saveOfflineQueue(remainingQueue);
 
     if (syncedCount > 0) {
-      showAlert(`已成功同步 ${syncedCount} 筆離線紀錄！`);
+      showAlert(`已成功自動同步 ${syncedCount} 筆離線紀錄！`);
       loadData();
     }
   }
@@ -765,7 +765,7 @@
     listEl.innerHTML = html;
   }
 
-  window.onload = () => {
+  window.onload = async () => {
     const savedCode = localStorage.getItem('user_family_code');
     const codeInput = document.getElementById('familyCode');
     if (savedCode) {
@@ -776,7 +776,9 @@
     
     updateNetworkStatus();
     loadData();
-    syncOfflineQueue();
+    if (navigator.onLine) {
+      await syncOfflineQueue();
+    }
   };
 </script>
 
