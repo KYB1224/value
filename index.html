@@ -4,6 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
+  <!-- 防快取設定：強制瀏覽器每次都抓取最新檔案 -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
   <!-- 引入 Manifest 檔 -->
   <link rel="manifest" href="manifest.json">
 
@@ -20,11 +25,11 @@
 
   <!-- 載入 Supabase SDK -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
     body { background-color: #f8fafc; padding: 15px; color: #334155; }
     
-    /* 設定卡片容器為相對定位，方便定位右上角關閉按鈕 */
     .card { 
       position: relative; 
       background: white; 
@@ -35,7 +40,6 @@
       box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
     }
     
-    /* 右上角圓形關閉按鈕樣式 */
     .close-btn {
       position: absolute;
       top: 15px;
@@ -68,13 +72,26 @@
     .sync-box input { flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 1.1rem; text-align: center; font-weight: bold; }
     .sync-box button { padding: 10px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1rem; }
 
+    /* 網路狀態提示條 */
+    .network-banner {
+      display: none;
+      background-color: #f59e0b;
+      color: white;
+      text-align: center;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: bold;
+      margin-bottom: 15px;
+    }
+
     .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
     .tab-btn { flex: 1; padding: 12px; border: none; background: #e2e8f0; border-radius: 8px; font-size: 1.15rem; font-weight: bold; cursor: pointer; color: #64748b; transition: 0.2s; }
     .tab-btn.active { background: #3b82f6; color: white; }
 
     .form-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
     .form-group.single { grid-template-columns: 1fr; }
-    input, select { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1.15rem; outline: none; }
+    input, select { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1.15rem; outline: none; background-color: #fff; }
     input:focus, select:focus { border-color: #3b82f6; }
 
     .submit-btn { width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 1.2rem; font-weight: bold; color: white; cursor: pointer; margin-bottom: 20px; transition: 0.2s; }
@@ -95,6 +112,10 @@
       border: 1px solid #e2e8f0;
       overflow: hidden;
       box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+    }
+    .record-item.offline-item {
+      border: 2px dashed #f59e0b;
+      background-color: #fffbe0;
     }
     
     .period-bar {
@@ -149,6 +170,7 @@
     .bg-warn { background-color: #f39c12; }
     .bg-danger { background-color: #ef4444; }
     .bg-low { background-color: #0284c7; }
+    .bg-pending { background-color: #d97706; }
 
     .modal-overlay {
       display: none;
@@ -184,14 +206,16 @@
 <body>
 
 <div class="card">
-  <!-- 右上角圓形關閉按鈕 -->
   <button class="close-btn" onclick="closeApp()" title="關閉程式">✕</button>
 
   <h2>專屬健康紀錄</h2>
 
+  <!-- 離線模式提示區 -->
+  <div id="networkBanner" class="network-banner">📡 目前離線，新紀錄將暫存於本機</div>
+
   <div class="sync-box">
     <input type="text" id="familyCode" placeholder="請輸入家庭代碼">
-    <button onclick="loadData()">同步</button>
+    <button onclick="manualSync()">同步</button>
   </div>
 
   <div class="tabs">
@@ -199,6 +223,7 @@
     <button class="tab-btn" id="btnTabBs" onclick="switchTab('bs')">🩸 血糖</button>
   </div>
 
+  <!-- 血壓表單 -->
   <div id="formBp">
     <div class="form-group">
       <input type="number" id="sys" placeholder="收縮壓 (高)">
@@ -215,6 +240,7 @@
     <button class="submit-btn btn-bp" onclick="saveBP()">儲存血壓資料</button>
   </div>
 
+  <!-- 血糖表單 -->
   <div id="formBs" style="display: none;">
     <div class="form-group single">
       <input type="number" id="glucose" placeholder="血糖值 (mg/dL)">
@@ -253,6 +279,15 @@
 </div>
 
 <script>
+  // 註冊 Service Worker 進行離線頁面快取
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js')
+        .then(reg => console.log('Service Worker 註冊成功'))
+        .catch(err => console.log('Service Worker 註冊失敗:', err));
+    });
+  }
+
   const SUPABASE_URL = 'https://qttmyftslivdjxhetcjb.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_IzevHVXG4LTgTF3BzLR20g_j12bgO2s';
 
@@ -261,29 +296,33 @@
   let filterDays = 30;
 
   function initSupabase() {
-    if (typeof supabase === 'undefined') {
-      showAlert('網路套件載入失敗，請重新整理網頁！');
-      return false;
-    }
-    if (!SUPABASE_KEY || SUPABASE_KEY.includes('請在此處貼上')) {
-      showAlert('設定未完成：請填入正確的 Supabase ANON Key！');
-      return false;
-    }
+    if (typeof supabase === 'undefined') return false;
+    if (!SUPABASE_KEY || SUPABASE_KEY.includes('請在此處貼上')) return false;
     if (!db) {
       db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     }
     return true;
   }
 
-  // 關閉 App 邏輯
+  function updateNetworkStatus() {
+    const banner = document.getElementById('networkBanner');
+    if (navigator.onLine) {
+      banner.style.display = 'none';
+      syncOfflineQueue();
+    } else {
+      banner.style.display = 'block';
+    }
+  }
+
+  window.addEventListener('online', updateNetworkStatus);
+  window.addEventListener('offline', updateNetworkStatus);
+
   function closeApp() {
-    // 嘗試透過分頁關閉或返回
     if (window.history.length > 1) {
       window.history.back();
     } else {
       window.close();
     }
-    // 若為獨立全螢幕 PWA，瀏覽器限制無法直接閉合視窗，跳出引導提示
     setTimeout(() => {
       showAlert('請由螢幕底部向上滑動，或按下主畫面按鈕即可離開應用程式喔！');
     }, 300);
@@ -339,15 +378,21 @@
       btnBs.classList.add('active');
       btnBp.classList.remove('active');
       formBs.style.display = 'block';
-      formBp.style.display = 'none';
+      formBs.style.display = 'none';
       heading.innerText = '📊 歷史紀錄 (血糖)';
     }
     loadData();
   }
 
-  async function saveBP() {
-    if (!initSupabase()) return;
+  function getOfflineQueue() {
+    return JSON.parse(localStorage.getItem('offline_queue') || '[]');
+  }
 
+  function saveOfflineQueue(queue) {
+    localStorage.setItem('offline_queue', JSON.stringify(queue));
+  }
+
+  async function saveBP() {
     const codeInput = document.getElementById('familyCode');
     const code = codeInput.value.trim();
     if (code) localStorage.setItem('user_family_code', code);
@@ -361,28 +406,55 @@
     if (!code) return showAlert('請輸入家庭代碼！');
     if (!sys || !dia) return showAlert('請填寫收縮壓與舒張壓！');
 
+    const recordData = {
+      family_code: code,
+      sys: sys,
+      dia: dia,
+      bpm: bpm,
+      period: period,
+      created_at: new Date().toISOString()
+    };
+
+    if (!navigator.onLine || !initSupabase()) {
+      const queue = getOfflineQueue();
+      queue.push({ type: 'bp', data: recordData, tempId: Date.now() });
+      saveOfflineQueue(queue);
+      showAlert('目前無網路，紀錄已暫存本機，待連線後自動同步！');
+      clearBpInputs();
+      loadData();
+      return;
+    }
+
     try {
-      const { error } = await db.from('bp_records').insert([
-        { family_code: code, sys: sys, dia: dia, bpm: bpm, period: period }
-      ]);
+      const { error } = await db.from('bp_records').insert([recordData]);
 
       if (error) {
-        showAlert('儲存失敗：' + error.message);
+        const queue = getOfflineQueue();
+        queue.push({ type: 'bp', data: recordData, tempId: Date.now() });
+        saveOfflineQueue(queue);
+        showAlert('線上儲存失敗，已轉存本機暫存：' + error.message);
       } else {
         showAlert('血壓資料已成功儲存！');
-        document.getElementById('sys').value = '';
-        document.getElementById('dia').value = '';
-        document.getElementById('bpm').value = '';
-        loadData();
       }
+      clearBpInputs();
+      loadData();
     } catch (e) {
-      showAlert('系統連線異常：' + e.message);
+      const queue = getOfflineQueue();
+      queue.push({ type: 'bp', data: recordData, tempId: Date.now() });
+      saveOfflineQueue(queue);
+      showAlert('連線異常，紀錄已暫存本機！');
+      clearBpInputs();
+      loadData();
     }
   }
 
-  async function saveBS() {
-    if (!initSupabase()) return;
+  function clearBpInputs() {
+    document.getElementById('sys').value = '';
+    document.getElementById('dia').value = '';
+    document.getElementById('bpm').value = '';
+  }
 
+  async function saveBS() {
     const codeInput = document.getElementById('familyCode');
     const code = codeInput.value.trim();
     if (code) localStorage.setItem('user_family_code', code);
@@ -393,27 +465,100 @@
     if (!code) return showAlert('請輸入家庭代碼！');
     if (!glucose) return showAlert('請輸入血糖值！');
 
+    const recordData = {
+      family_code: code,
+      glucose: glucose,
+      period: period,
+      created_at: new Date().toISOString()
+    };
+
+    if (!navigator.onLine || !initSupabase()) {
+      const queue = getOfflineQueue();
+      queue.push({ type: 'bs', data: recordData, tempId: Date.now() });
+      saveOfflineQueue(queue);
+      showAlert('目前無網路，紀錄已暫存本機，待連線後自動同步！');
+      document.getElementById('glucose').value = '';
+      loadData();
+      return;
+    }
+
     try {
-      const { error } = await db.from('bs_records').insert([
-        { family_code: code, glucose: glucose, period: period }
-      ]);
+      const { error } = await db.from('bs_records').insert([recordData]);
 
       if (error) {
-        showAlert('儲存失敗：' + error.message);
+        const queue = getOfflineQueue();
+        queue.push({ type: 'bs', data: recordData, tempId: Date.now() });
+        saveOfflineQueue(queue);
+        showAlert('線上儲存失敗，已轉存本機暫存：' + error.message);
       } else {
         showAlert('血糖資料已成功儲存！');
-        document.getElementById('glucose').value = '';
-        loadData();
       }
+      document.getElementById('glucose').value = '';
+      loadData();
     } catch (e) {
-      showAlert('系統連線異常：' + e.message);
+      const queue = getOfflineQueue();
+      queue.push({ type: 'bs', data: recordData, tempId: Date.now() });
+      saveOfflineQueue(queue);
+      showAlert('連線異常，紀錄已暫存本機！');
+      document.getElementById('glucose').value = '';
+      loadData();
     }
   }
 
-  function confirmDelete(id) {
+  async function syncOfflineQueue() {
+    if (!navigator.onLine || !initSupabase()) return;
+
+    const queue = getOfflineQueue();
+    if (queue.length === 0) return;
+
+    const remainingQueue = [];
+    let syncedCount = 0;
+
+    for (const item of queue) {
+      const tableName = (item.type === 'bp') ? 'bp_records' : 'bs_records';
+      try {
+        const { error } = await db.from(tableName).insert([item.data]);
+        if (error) {
+          remainingQueue.push(item);
+        } else {
+          syncedCount++;
+        }
+      } catch (e) {
+        remainingQueue.push(item);
+      }
+    }
+
+    saveOfflineQueue(remainingQueue);
+
+    if (syncedCount > 0) {
+      showAlert(`已成功同步 ${syncedCount} 筆離線紀錄！`);
+      loadData();
+    }
+  }
+
+  function manualSync() {
+    if (navigator.onLine) {
+      syncOfflineQueue();
+      loadData();
+    } else {
+      showAlert('目前處於離線狀態，無法進行線上同步！');
+    }
+  }
+
+  function confirmDelete(id, isOffline = false, tempId = null) {
     showConfirm('確定要刪除這筆紀錄嗎？\n(刪除後無法復原喔！)', async () => {
-      if (!initSupabase()) return;
-      
+      if (isOffline) {
+        let queue = getOfflineQueue();
+        queue = queue.filter(item => item.tempId !== tempId);
+        saveOfflineQueue(queue);
+        loadData();
+        return;
+      }
+
+      if (!navigator.onLine || !initSupabase()) {
+        return showAlert('離線狀態下無法刪除雲端已同步的紀錄！');
+      }
+
       const tableName = (currentTab === 'bp') ? 'bp_records' : 'bs_records';
       try {
         const { error } = await db.from(tableName).delete().eq('id', id);
@@ -444,10 +589,6 @@
 
   async function loadData() {
     const listEl = document.getElementById('historyList');
-    if (!initSupabase()) {
-      listEl.innerHTML = '<span style="color:red">金鑰設定未完成，無法讀取資料。</span>';
-      return;
-    }
 
     const codeInput = document.getElementById('familyCode');
     let code = codeInput.value.trim();
@@ -459,7 +600,7 @@
       localStorage.setItem('user_family_code', code);
     }
 
-    listEl.innerHTML = '讀取中...';
+    const offlineQueue = getOfflineQueue().filter(item => item.type === currentTab && item.data.family_code === code);
 
     let queryDate = null;
     if (filterDays > 0) {
@@ -468,112 +609,160 @@
       queryDate = d.toISOString();
     }
 
-    try {
-      if (currentTab === 'bp') {
-        let query = db.from('bp_records').select('*').eq('family_code', code);
-        if (queryDate) query = query.gte('created_at', queryDate);
+    let cloudData = [];
+    let isCloudLoaded = false;
+
+    if (navigator.onLine && initSupabase()) {
+      try {
+        const tableName = (currentTab === 'bp') ? 'bp_records' : 'bs_records';
+        let query = db.from(tableName).select('*').eq('family_code', code);
+        
+        if (queryDate) {
+          query = query.gte('created_at', queryDate);
+        }
         
         const { data, error } = await query.order('created_at', { ascending: false }).limit(100);
 
-        if (error) {
-          listEl.innerHTML = '<span style="color:red">資料讀取失敗：' + error.message + '</span>';
-          return;
+        if (!error && data) {
+          cloudData = data;
+          isCloudLoaded = true;
+          localStorage.setItem(`cache_${currentTab}_${code}`, JSON.stringify(cloudData));
         }
-        if (!data || data.length === 0) {
-          listEl.innerHTML = '此時間範圍內尚無血壓紀錄';
-          return;
-        }
-
-        listEl.innerHTML = data.map(r => {
-          const dateObj = new Date(r.created_at);
-          const timeStr = dateObj.toLocaleString('zh-TW', { hour12: false, month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-          
-          let status = '<span class="tag bg-normal">正常</span>';
-          if (r.sys >= 140 || r.dia >= 90) status = '<span class="tag bg-danger">偏高</span>';
-          else if (r.sys >= 120 || r.dia >= 80) status = '<span class="tag bg-warn">警戒</span>';
-
-          const periodInfo = getPeriodStyle(r.period);
-          const bpmHtml = r.bpm ? `<div style="font-size: 0.95rem; color: #64748b; margin-top: 2px;">心跳：${r.bpm} <small>BPM</small></div>` : '';
-
-          return `
-            <div class="record-item">
-              <div class="period-bar ${periodInfo.class}">${periodInfo.text}</div>
-              <div class="record-content">
-                <div class="record-header">
-                  <span class="record-time">🕒 ${timeStr}</span>
-                  ${status}
-                </div>
-                <div class="record-body">
-                  <div>
-                    <div class="record-data">
-                      ${r.sys} / ${r.dia} <small style="font-size: 0.85rem; color: #64748b;">mmHg</small>
-                    </div>
-                    ${bpmHtml}
-                  </div>
-                  <button class="delete-btn" onclick="confirmDelete(${r.id})">刪除</button>
-                </div>
-              </div>
-            </div>
-          `;
-        }).join('');
-
-      } else {
-        let query = db.from('bs_records').select('*').eq('family_code', code);
-        if (queryDate) query = query.gte('created_at', queryDate);
-
-        const { data, error } = await query.order('created_at', { ascending: false }).limit(100);
-
-        if (error) {
-          listEl.innerHTML = '<span style="color:red">資料讀取失敗：' + error.message + '</span>';
-          return;
-        }
-        if (!data || data.length === 0) {
-          listEl.innerHTML = '此時間範圍內尚無血糖紀錄';
-          return;
-        }
-
-        listEl.innerHTML = data.map(r => {
-          const dateObj = new Date(r.created_at);
-          const timeStr = dateObj.toLocaleString('zh-TW', { hour12: false, month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-          
-          let status = '<span class="tag bg-normal">正常</span>';
-          const g = r.glucose;
-          const isFasting = r.period ? r.period.includes('空腹') : false;
-
-          if (g < 70) {
-            status = '<span class="tag bg-low">偏低</span>';
-          } else if (isFasting) {
-            if (g >= 126) status = '<span class="tag bg-danger">偏高</span>';
-            else if (g >= 100) status = '<span class="tag bg-warn">警戒</span>';
-          } else {
-            if (g >= 200) status = '<span class="tag bg-danger">偏高</span>';
-            else if (g >= 140) status = '<span class="tag bg-warn">警戒</span>';
-          }
-
-          const periodInfo = getPeriodStyle(r.period);
-
-          return `
-            <div class="record-item">
-              <div class="period-bar ${periodInfo.class}">${periodInfo.text}</div>
-              <div class="record-content">
-                <div class="record-header">
-                  <span class="record-time">🕒 ${timeStr}</span>
-                  ${status}
-                </div>
-                <div class="record-body">
-                  <div class="record-data">
-                    血糖：${r.glucose} <small style="font-size: 0.85rem; color: #64748b;">mg/dL</small>
-                  </div>
-                  <button class="delete-btn" onclick="confirmDelete(${r.id})">刪除</button>
-                </div>
-              </div>
-            </div>
-          `;
-        }).join('');
+      } catch (e) {
+        console.warn('線上讀取失敗，使用快取資料');
       }
-    } catch (e) {
-      listEl.innerHTML = '<span style="color:red">連線異常：' + e.message + '</span>';
     }
+
+    if (!isCloudLoaded) {
+      cloudData = JSON.parse(localStorage.getItem(`cache_${currentTab}_${code}`) || '[]');
+    }
+
+    if (cloudData.length === 0 && offlineQueue.length === 0) {
+      listEl.innerHTML = '此時間範圍內尚無紀錄';
+      return;
+    }
+
+    let html = '';
+
+    // 渲染離線佇列
+    offlineQueue.forEach(item => {
+      const r = item.data;
+      const dateObj = new Date(r.created_at);
+      const timeStr = dateObj.toLocaleString('zh-TW', { hour12: false, month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+      const periodInfo = getPeriodStyle(r.period);
+
+      if (currentTab === 'bp') {
+        const bpmHtml = r.bpm ? `<div style="font-size: 0.95rem; color: #64748b; margin-top: 2px;">心跳：${r.bpm} <small>BPM</small></div>` : '';
+        html += `
+          <div class="record-item offline-item">
+            <div class="period-bar ${periodInfo.class}">${periodInfo.text}</div>
+            <div class="record-content">
+              <div class="record-header">
+                <span class="record-time">🕒 ${timeStr}</span>
+                <span class="tag bg-pending">待同步</span>
+              </div>
+              <div class="record-body">
+                <div>
+                  <div class="record-data">
+                    ${r.sys} / ${r.dia} <small style="font-size: 0.85rem; color: #64748b;">mmHg</small>
+                  </div>
+                  ${bpmHtml}
+                </div>
+                <button class="delete-btn" onclick="confirmDelete(null, true, ${item.tempId})">刪除</button>
+              </div>
+            </div>
+          </div>
+        `;
+      } else {
+        html += `
+          <div class="record-item offline-item">
+            <div class="period-bar ${periodInfo.class}">${periodInfo.text}</div>
+            <div class="record-content">
+              <div class="record-header">
+                <span class="record-time">🕒 ${timeStr}</span>
+                <span class="tag bg-pending">待同步</span>
+              </div>
+              <div class="record-body">
+                <div class="record-data">
+                  血糖：${r.glucose} <small style="font-size: 0.85rem; color: #64748b;">mg/dL</small>
+                </div>
+                <button class="delete-btn" onclick="confirmDelete(null, true, ${item.tempId})">刪除</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+    });
+
+    // 渲染雲端/快取紀錄
+    cloudData.forEach(r => {
+      const dateObj = new Date(r.created_at);
+      const timeStr = dateObj.toLocaleString('zh-TW', { hour12: false, month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+      const periodInfo = getPeriodStyle(r.period);
+
+      if (currentTab === 'bp') {
+        let status = '<span class="tag bg-normal">正常</span>';
+        if (r.sys >= 140 || r.dia >= 90) status = '<span class="tag bg-danger">偏高</span>';
+        else if (r.sys >= 120 || r.dia >= 80) status = '<span class="tag bg-warn">警戒</span>';
+
+        const bpmHtml = r.bpm ? `<div style="font-size: 0.95rem; color: #64748b; margin-top: 2px;">心跳：${r.bpm} <small>BPM</small></div>` : '';
+
+        html += `
+          <div class="record-item">
+            <div class="period-bar ${periodInfo.class}">${periodInfo.text}</div>
+            <div class="record-content">
+              <div class="record-header">
+                <span class="record-time">🕒 ${timeStr}</span>
+                ${status}
+              </div>
+              <div class="record-body">
+                <div>
+                  <div class="record-data">
+                    ${r.sys} / ${r.dia} <small style="font-size: 0.85rem; color: #64748b;">mmHg</small>
+                  </div>
+                  ${bpmHtml}
+                </div>
+                <button class="delete-btn" onclick="confirmDelete(${r.id})">刪除</button>
+              </div>
+            </div>
+          </div>
+        `;
+      } else {
+        let status = '<span class="tag bg-normal">正常</span>';
+        const g = r.glucose;
+        const isFasting = r.period ? r.period.includes('空腹') : false;
+
+        if (g < 70) {
+          status = '<span class="tag bg-low">偏低</span>';
+        } else if (isFasting) {
+          if (g >= 126) status = '<span class="tag bg-danger">偏高</span>';
+          else if (g >= 100) status = '<span class="tag bg-warn">警戒</span>';
+        } else {
+          if (g >= 200) status = '<span class="tag bg-danger">偏高</span>';
+          else if (g >= 140) status = '<span class="tag bg-warn">警戒</span>';
+        }
+
+        html += `
+          <div class="record-item">
+            <div class="period-bar ${periodInfo.class}">${periodInfo.text}</div>
+            <div class="record-content">
+              <div class="record-header">
+                <span class="record-time">🕒 ${timeStr}</span>
+                ${status}
+              </div>
+              <div class="record-body">
+                <div class="record-data">
+                  血糖：${r.glucose} <small style="font-size: 0.85rem; color: #64748b;">mg/dL</small>
+                </div>
+                <button class="delete-btn" onclick="confirmDelete(${r.id})">刪除</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+    });
+
+    listEl.innerHTML = html;
   }
 
   window.onload = () => {
@@ -584,7 +773,10 @@
     } else {
       codeInput.value = 'LOVE88';
     }
+    
+    updateNetworkStatus();
     loadData();
+    syncOfflineQueue();
   };
 </script>
 
