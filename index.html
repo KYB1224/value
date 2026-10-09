@@ -53,17 +53,17 @@
       <div class="space-y-2">
         <div class="flex gap-2 p-1 bg-slate-200/60 rounded-2xl">
           <button onclick="switchFilterDimension('category')" id="dim-btn-category"
-                  class="flex-1 py-2 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 bg-white text-sky-700 shadow-sm">
-            <i data-lucide="grid" class="w-3.5 h-3.5"></i> 📦 按商品類別
+                  class="flex-1 py-2.5 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 bg-white text-sky-700 shadow-sm">
+            📦 按商品類別
           </button>
           <button onclick="switchFilterDimension('store')" id="dim-btn-store"
-                  class="flex-1 py-2 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 text-slate-500 hover:text-slate-800">
-            <i data-lucide="store" class="w-3.5 h-3.5"></i> 🏪 按購買通路
+                  class="flex-1 py-2.5 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 text-slate-500 hover:text-slate-800">
+            🏪 按購買通路
           </button>
         </div>
 
-        <!-- 動態標籤列 -->
-        <div class="flex gap-2 overflow-x-auto no-scrollbar py-1" id="filterPills"></div>
+        <!-- 動態標籤列 (對齊修復與滾動優化) -->
+        <div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 px-0.5" id="filterPills"></div>
       </div>
 
       <div class="flex justify-between items-center text-sm text-slate-500 px-1 font-bold">
@@ -208,7 +208,7 @@
     <div class="bg-white w-full max-w-sm rounded-3xl p-5 space-y-4 shadow-xl border border-slate-100 max-h-[85vh] flex flex-col">
       <div class="flex justify-between items-center shrink-0">
         <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2">
-          <i data-lucide="settings" class="w-5 h-5 text-sky-600"></i> 管理自訂通路 (全家同步)
+          <i data-lucide="settings" class="w-5 h-5 text-sky-600"></i> 管理自訂通路
         </h3>
         <button onclick="toggleStoreManageModal(false)" class="text-slate-400 hover:text-slate-600">
           <i data-lucide="x" class="w-6 h-6"></i>
@@ -404,7 +404,7 @@
     }
 
     let records = [];
-    let cloudStoresList = []; // 來自 Supabase 雲端的自訂通路物件 [{name, logo_url}]
+    let cloudStoresList = []; 
     let currentDimension = "category"; 
     let activeCategory = "全部";
     let activeStore = "全部";
@@ -448,7 +448,6 @@
       if (headerLabel) headerLabel.innerText = code;
     }
 
-    // 取得所有可用通路名稱清單（融合預設、雲端與本機）
     function getStoreOptionsList() {
       if (cloudStoresList.length > 0) {
         return cloudStoresList.map(s => s.name);
@@ -498,7 +497,6 @@
       registerServiceWorker();
     };
 
-    // 從 Supabase 讀取雲端通路與比價紀錄
     async function fetchStoresAndRecords() {
       await fetchCustomStoresFromCloud();
       await fetchRecords();
@@ -515,7 +513,6 @@
         if (data && data.length > 0) {
           cloudStoresList = data.map(d => ({ name: d.name, logo_url: d.logo_url || '', id: d.id }));
         } else {
-          // 若雲端完全無資料，將預設清單寫入雲端初始化
           cloudStoresList = defaultStores.map(s => ({ name: s, logo_url: defaultStoreIcons[s] || '' }));
           for (let s of cloudStoresList) {
             await db.from('store_options').insert([{ group_code: currentGroup, name: s.name, logo_url: s.logo_url }]);
@@ -535,11 +532,11 @@
       const storeBtn = document.getElementById('dim-btn-store');
 
       if (dim === 'category') {
-        catBtn.className = "flex-1 py-2 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 bg-white text-sky-700 shadow-sm";
-        storeBtn.className = "flex-1 py-2 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 text-slate-500 hover:text-slate-800";
+        catBtn.className = "flex-1 py-2.5 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 bg-white text-sky-700 shadow-sm";
+        storeBtn.className = "flex-1 py-2.5 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 text-slate-500 hover:text-slate-800";
       } else {
-        storeBtn.className = "flex-1 py-2 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 bg-white text-sky-700 shadow-sm";
-        catBtn.className = "flex-1 py-2 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 text-slate-500 hover:text-slate-800";
+        storeBtn.className = "flex-1 py-2.5 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 bg-white text-sky-700 shadow-sm";
+        catBtn.className = "flex-1 py-2.5 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 text-slate-500 hover:text-slate-800";
       }
 
       renderFilterPills();
@@ -564,17 +561,30 @@
       } else {
         const stores = ["全部", ...getStoreOptionsList()];
         container.innerHTML = stores.map(store => {
-          const logoUrl = getStoreLogoUrl(store);
           const isSelected = (activeStore === store);
+          if (store === "全部") {
+            return `
+              <button onclick="selectStore('全部')"
+                      class="px-4 py-2 rounded-2xl text-xs font-extrabold whitespace-nowrap transition shadow-sm ${
+                        isSelected 
+                          ? 'bg-sky-600 text-white shadow-md' 
+                          : 'bg-white text-slate-600 border border-slate-200'
+                      }">
+                全部
+              </button>
+            `;
+          }
+
+          const logoUrl = getStoreLogoUrl(store);
           return `
             <button onclick="selectStore('${store}')"
-                    class="px-3.5 py-1.5 rounded-2xl text-xs font-extrabold whitespace-nowrap transition shadow-sm flex items-center gap-1.5 ${
+                    class="px-3 py-1.5 rounded-2xl text-xs font-extrabold whitespace-nowrap transition shadow-sm flex items-center gap-1.5 shrink-0 ${
                       isSelected 
                         ? 'bg-sky-600 text-white shadow-md' 
                         : 'bg-white text-slate-600 border border-slate-200'
                     }">
-              <img src="${logoUrl}" class="w-4 h-4 rounded-full object-cover shrink-0">
-              <span>${store}</span>
+              <img src="${logoUrl}" class="w-4 h-4 rounded-full object-cover shrink-0 border border-slate-100">
+              <span class="truncate max-w-[100px]">${store}</span>
             </button>
           `;
         }).join('');
@@ -612,8 +622,8 @@
 
       const manageBtnHtml = `
         <div onclick="openStoreManageModal('${dropdownId}', '${hiddenInputId}', '${labelId}')" 
-             class="sticky bottom-0 bg-slate-50 hover:bg-slate-100 p-3 text-center text-xs font-black text-sky-600 border-t border-slate-100 cursor-pointer flex items-center justify-center gap-1">
-          <i data-lucide="settings" class="w-3.5 h-3.5"></i> ⚙️ 管理 / 新增通路 (全家同步)
+             class="sticky bottom-0 bg-slate-50 hover:bg-slate-100 p-3 text-center text-xs font-black text-sky-600 border-t border-slate-100 cursor-pointer flex items-center justify-center gap-1.5">
+          <i data-lucide="settings" class="w-3.5 h-3.5"></i> 管理 / 新增通路
         </div>
       `;
 
@@ -649,7 +659,6 @@
       }
     }
 
-    // 通路管理 Modal 與 雲端同步邏輯
     let editingStoreTarget = null;
 
     function openStoreManageModal(dropdownId, hiddenInputId, labelId) {
@@ -699,7 +708,7 @@
       document.getElementById('newStoreNameInput').value = storeName;
       document.getElementById('newStoreLogoInput').value = isDefaultLogo ? '' : currentLogo;
 
-      document.getElementById('addStoreSubmitBtn').innerText = '儲存修改並同步';
+      document.getElementById('addStoreSubmitBtn').innerText = '儲存修改';
       document.getElementById('cancelEditStoreBtn').classList.remove('hidden');
     }
 
@@ -727,14 +736,12 @@
       let currentList = getStoreOptionsList();
 
       if (editingStoreTarget) {
-        // 修改模式
         if (db) {
           try {
             await db.from('store_options').update({ name: newName, logo_url: newLogo }).eq('group_code', currentGroup).eq('name', editingStoreTarget);
           } catch(e) { console.error("雲端更新通路失敗", e); }
         }
       } else {
-        // 新增模式
         if (currentList.includes(newName)) {
           alert('此通路名稱已存在！');
           return;
@@ -1270,7 +1277,12 @@
       if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
         const swCode = `
           self.addEventListener('install', e => self.skipWaiting());
-          self.addEventListener('activate', e => self.clients.claim());
+          self.addEventListener('activate', e => {
+            e.waitUntil(
+              caches.keys().then(keys => Promise.all(keys.map(key => caches.delete(key))))
+            );
+            return self.clients.claim();
+          });
           self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => caches.match(e.request))));
         `;
         const blob = new Blob([swCode], { type: 'text/javascript' });
