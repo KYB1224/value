@@ -1,1295 +1,786 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <link rel="icon" href="https://i.meee.com.tw/Se96Hpw.jpg" type="image/x-icon">
-  <link rel="apple-touch-icon" href="https://i.meee.com.tw/Se96Hpw.jpg">
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>隨手比價 PWA</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <link rel="manifest" href='data:application/manifest+json,{"name":"隨手比價","short_name":"比價","start_url":".","display":"standalone","background_color":"#f2f5f8","theme_color":"#0284c7"}'>
-  <meta name="theme-color" content="#0284c7">
+  <!-- 防快取設定：強制瀏覽器每次都抓取最新檔案 -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
 
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- 引入 Manifest 檔 -->
+  <link rel="manifest" href="manifest.json">
+
+  <!-- 標準圖示標籤 -->
+  <link rel="icon" type="image/png" sizes="192x192" href="https://i.postimg.cc/BZBSmV8y/0B09Mdp.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="https://i.postimg.cc/BZBSmV8y/0B09Mdp.png">
+  <link rel="apple-touch-icon" href="https://i.postimg.cc/BZBSmV8y/0B09Mdp.png">
+
+  <meta name="theme-color" content="#3b82f6">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+
+  <title>專屬健康紀錄</title>
+
+  <!-- 載入 Supabase SDK -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
   <style>
-    .no-scrollbar::-webkit-scrollbar { display: none; }
-    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    body { -webkit-tap-highlight-color: transparent; }
-    input, select { font-size: 1rem !important; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body { background-color: #f8fafc; padding: 15px; color: #334155; }
+    
+    .card { 
+      position: relative; 
+      background: white; 
+      border-radius: 16px; 
+      padding: 20px; 
+      max-width: 480px; 
+      margin: 0 auto; 
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
+    }
+    
+    .close-btn {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background-color: #f1f5f9;
+      color: #64748b;
+      border: 1px solid #cbd5e1;
+      font-size: 1.2rem;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      line-height: 1;
+      z-index: 10;
+    }
+    .close-btn:active {
+      background-color: #e2e8f0;
+      color: #0f172a;
+      transform: scale(0.92);
+    }
+
+    h2 { text-align: center; margin-bottom: 20px; font-size: 1.5rem; color: #1e293b; padding-right: 30px; }
+    
+    .sync-box { display: flex; gap: 8px; margin-bottom: 20px; background: #f1f5f9; padding: 10px; border-radius: 10px; }
+    .sync-box input { flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 1.1rem; text-align: center; font-weight: bold; }
+    .sync-box button { padding: 10px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1rem; }
+
+    /* 網路狀態提示條 */
+    .network-banner {
+      display: none;
+      background-color: #f59e0b;
+      color: white;
+      text-align: center;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: bold;
+      margin-bottom: 15px;
+    }
+
+    .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+    .tab-btn { flex: 1; padding: 12px; border: none; background: #e2e8f0; border-radius: 8px; font-size: 1.15rem; font-weight: bold; cursor: pointer; color: #64748b; transition: 0.2s; }
+    .tab-btn.active { background: #3b82f6; color: white; }
+
+    .form-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+    .form-group.single { grid-template-columns: 1fr; }
+    input, select { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1.15rem; outline: none; background-color: #fff; }
+    input:focus, select:focus { border-color: #3b82f6; }
+
+    .submit-btn { width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 1.2rem; font-weight: bold; color: white; cursor: pointer; margin-bottom: 20px; transition: 0.2s; }
+    .btn-bp { background-color: #10b981; }
+    .btn-bs { background-color: #ef4444; }
+
+    .filter-box { display: flex; gap: 8px; margin-bottom: 15px; }
+    .filter-btn { flex: 1; padding: 10px 0; border: 1px solid #cbd5e1; background: white; border-radius: 8px; font-size: 1.05rem; color: #475569; cursor: pointer; text-align: center; font-weight: bold; }
+    .filter-btn.active { background: #475569; color: white; border-color: #475569; }
+
+    .history-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 2px solid #f1f5f9; display: flex; justify-content: space-between; }
+    
+    .record-item {
+      display: flex;
+      background: #ffffff;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      border: 1px solid #e2e8f0;
+      overflow: hidden;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+    }
+    .record-item.offline-item {
+      border: 2px dashed #f59e0b;
+      background-color: #fffbe0;
+    }
+    
+    .period-bar {
+      width: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 1.15rem;
+      writing-mode: vertical-lr;
+      letter-spacing: 3px;
+      flex-shrink: 0;
+    }
+
+    .bar-morning { background-color: #f59e0b; color: #ffffff; }
+    .bar-evening { background-color: #475569; color: #ffffff; }
+    .bar-bedtime { background-color: #7c3aed; color: #ffffff; }
+    .bar-default { background-color: #64748b; color: #ffffff; }
+
+    .record-content {
+      flex: 1;
+      padding: 12px 14px;
+    }
+    
+    .record-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .record-time { color: #1e293b; font-size: 1.05rem; font-weight: bold; display: flex; align-items: center; gap: 6px; }
+    .record-body { display: flex; justify-content: space-between; align-items: flex-end; }
+    .record-data { font-size: 1.35rem; font-weight: bold; color: #0f172a; line-height: 1.3; }
+    
+    .delete-btn {
+      background: transparent;
+      color: #94a3b8;
+      border: none;
+      padding: 2px 4px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .delete-btn:hover, .delete-btn:active { color: #ef4444; }
+
+    .tag {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: bold;
+      white-space: nowrap;
+      color: #ffffff;
+    }
+    .bg-normal { background-color: #10b981; }
+    .bg-warn { background-color: #f39c12; }
+    .bg-danger { background-color: #ef4444; }
+    .bg-low { background-color: #0284c7; }
+    .bg-pending { background-color: #d97706; }
+
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .modal-box {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      width: 85%;
+      max-width: 360px;
+      text-align: center;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    }
+    .modal-msg {
+      font-size: 1.25rem;
+      font-weight: bold;
+      color: #1e293b;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+    .modal-buttons { display: flex; gap: 10px; }
+    .modal-btn { flex: 1; padding: 12px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-size: 1.15rem; font-weight: bold; cursor: pointer; }
+    .modal-btn.cancel { background: #94a3b8; }
+    .modal-btn.danger { background: #ef4444; }
   </style>
 </head>
-<body class="bg-[#f2f5f8] min-h-screen text-slate-800 pb-32 font-sans selection:bg-sky-500 selection:text-white" onclick="closeAllCustomDropdowns(event)">
+<body>
 
-  <main class="max-w-md mx-auto p-3 space-y-4">
-    <header class="flex flex-col gap-2.5 py-1 px-1">
-      <div class="flex justify-between items-center">
-        <h1 class="text-2xl font-black text-slate-800 tracking-tight shrink-0">隨手比價</h1>
-        <div class="flex items-center gap-1.5 shrink-0">
-          <span id="cloudStatus" class="bg-sky-50/80 text-sky-600 text-[11px] px-2 py-1 rounded-full font-medium flex items-center gap-1 border border-sky-100/60">
-            <i data-lucide="cloud" class="w-3 h-3"></i> 雲端同步
-          </span>
-          <button onclick="toggleFamilyModal(true)" class="bg-amber-50 hover:bg-amber-100 text-amber-700 text-[11px] px-2.5 py-1.5 rounded-xl font-bold flex items-center gap-1 border border-amber-200 transition">
-            <i data-lucide="users" class="w-3.5 h-3.5"></i> <span id="headerGroupLabel">共用中</span>
-          </button>
-          <button onclick="fetchRecords()" class="bg-sky-50/80 text-sky-600 hover:bg-sky-100 text-[11px] px-2.5 py-1.5 rounded-xl font-bold flex items-center gap-1 border border-sky-200/60 transition">
-            <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
-          </button>
-        </div>
-      </div>
-    </header>
+<div class="card">
+  <button class="close-btn" onclick="closeApp()" title="關閉程式">✕</button>
 
-    <!-- TAB 1: Search List View (查價格) -->
-    <section id="tab-search" class="space-y-4 hidden">
-      <div class="relative">
-        <i data-lucide="search" class="absolute left-4 top-4 text-slate-400 w-6 h-6"></i>
-        <input type="text" id="searchInput" oninput="renderRecords()" placeholder="搜尋商品名稱或備註..."
-               class="w-full pl-12 pr-4 py-4 rounded-2xl border-0 shadow-sm text-slate-700 bg-white placeholder-slate-400 focus:ring-2 focus:ring-sky-500 text-lg font-bold">
-      </div>
+  <h2>專屬健康紀錄</h2>
 
-      <!-- 雙維度分類切換按鈕 (類別 / 通路) -->
-      <div class="space-y-2">
-        <div class="flex gap-2 p-1 bg-slate-200/60 rounded-2xl">
-          <button onclick="switchFilterDimension('category')" id="dim-btn-category"
-                  class="flex-1 py-2.5 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 bg-white text-sky-700 shadow-sm">
-            📦 按商品類別
-          </button>
-          <button onclick="switchFilterDimension('store')" id="dim-btn-store"
-                  class="flex-1 py-2.5 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 text-slate-500 hover:text-slate-800">
-            🏪 按購買通路
-          </button>
-        </div>
+  <!-- 離線模式提示區 -->
+  <div id="networkBanner" class="network-banner">📡 目前離線，新紀錄將暫存於本機</div>
 
-        <!-- 動態標籤列 (對齊修復與滾動優化) -->
-        <div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 px-0.5" id="filterPills"></div>
-      </div>
-
-      <div class="flex justify-between items-center text-sm text-slate-500 px-1 font-bold">
-        <span id="recordCountText">共 0 筆比價紀錄</span>
-      </div>
-
-      <div id="priceList" class="space-y-3"></div>
-    </section>
-
-    <!-- TAB 2: Add Form View (記一筆) -->
-    <section id="tab-add" class="block">
-      <div class="bg-white p-4 sm:p-5 rounded-3xl shadow-sm space-y-4 border border-slate-100">
-        <form id="priceForm" onsubmit="saveRecord(event)" class="space-y-4">
-          
-          <div class="grid grid-cols-2 gap-3">
-            <div class="relative">
-              <label class="block text-sm font-black text-slate-600 mb-1.5">通路</label>
-              <input type="hidden" id="inputStore" value="全聯">
-              <button type="button" onclick="toggleCustomDropdown('addStoreDropdown', event)" class="w-full p-3.5 sm:p-4 rounded-2xl bg-slate-100/90 border-0 flex items-center justify-between text-base font-black text-slate-800">
-                <span id="addStoreSelectedLabel" class="flex items-center gap-2 truncate">
-                  <img src="https://i.meee.com.tw/TDGiMEb.png" class="w-5 h-5 rounded-full object-cover shrink-0"> 全聯
-                </span>
-                <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 shrink-0"></i>
-              </button>
-              <div id="addStoreDropdown" class="absolute left-0 right-0 mt-1 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 max-h-60 overflow-y-auto hidden"></div>
-            </div>
-
-            <div>
-              <label class="block text-sm font-black text-slate-600 mb-1.5">日期</label>
-              <input type="date" id="inputDate" required class="w-full p-3.5 sm:p-4 rounded-2xl bg-slate-100/90 border-0 focus:ring-2 focus:ring-sky-500 text-base font-black text-slate-800">
-            </div>
-          </div>
-
-          <div class="grid grid-cols-12 gap-3">
-            <div class="col-span-7">
-              <label class="block text-sm font-black text-slate-600 mb-1.5">商品名稱</label>
-              <input type="text" id="inputName" required placeholder="例：林鳳營鮮乳" oninput="calculateUnitPrice(); checkDealAlert();"
-                     class="w-full p-3.5 sm:p-4 rounded-2xl bg-slate-100/90 border-0 focus:ring-2 focus:ring-sky-500 text-base font-black text-slate-800 placeholder-slate-400">
-            </div>
-            <div class="col-span-5">
-              <label class="block text-sm font-black text-slate-600 mb-1.5">類別</label>
-              <select id="inputCategory" class="w-full p-3.5 sm:p-4 rounded-2xl bg-slate-100/90 border-0 focus:ring-2 focus:ring-sky-500 text-base font-black text-slate-800">
-                <option value="肉品">肉品</option>
-                <option value="蔬菜">蔬菜</option>
-                <option value="餅乾">餅乾</option>
-                <option value="飲料/沖泡粉">飲料/沖泡粉</option>
-                <option value="乾糧/罐頭">乾糧/罐頭</option>
-                <option value="冷藏/冷凍">冷藏/冷凍</option>
-                <option value="清潔用品">清潔用品</option>
-                <option value="保養/美妝">保養/美妝</option>
-                <option value="生活用品" selected>生活用品</option>
-                <option value="藥品/保健品">藥品/保健品</option>
-                <option value="其他">其他</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-12 gap-2">
-            <div class="col-span-4">
-              <label class="block text-sm font-black text-slate-600 mb-1.5">金額</label>
-              <input type="number" step="0.1" id="inputPrice" required placeholder="0" oninput="calculateUnitPrice(); checkDealAlert();"
-                     class="w-full p-3.5 sm:p-4 rounded-2xl bg-slate-100/90 border-0 focus:ring-2 focus:ring-sky-500 text-base font-black text-slate-800 placeholder-slate-400">
-            </div>
-            <div class="col-span-5">
-              <label class="block text-sm font-black text-slate-600 mb-1.5">容量 / 數量</label>
-              <input type="number" step="0.01" id="inputQty" required placeholder="0" oninput="calculateUnitPrice(); checkDealAlert();"
-                     class="w-full p-3.5 sm:p-4 rounded-2xl bg-slate-100/90 border-0 focus:ring-2 focus:ring-sky-500 text-base font-black text-slate-800 placeholder-slate-400">
-            </div>
-            <div class="col-span-3">
-              <label class="block text-sm font-black text-slate-600 mb-1.5">單位</label>
-              <select id="inputUnit" onchange="calculateUnitPrice(); checkDealAlert();" class="w-full p-3.5 sm:p-4 rounded-2xl bg-slate-100/90 border-0 focus:ring-2 focus:ring-sky-500 text-base font-black text-slate-800">
-                <option value="ml" selected>ml</option>
-                <option value="g">g</option>
-                <option value="罐">罐</option>
-                <option value="包">包</option>
-                <option value="個">個</option>
-              </select>
-            </div>
-          </div>
-
-          <div id="dealAlertBanner" class="hidden p-3.5 rounded-2xl text-xs sm:text-sm font-bold transition-all border flex items-center gap-2">
-            <i id="dealAlertIcon" data-lucide="info" class="w-5 h-5 shrink-0"></i>
-            <span id="dealAlertText"></span>
-          </div>
-
-          <div>
-            <label class="block text-sm font-black text-slate-600 mb-1.5">備註 (選填)</label>
-            <input type="text" id="inputNote" placeholder="例：買一送一、特價優惠"
-                   class="w-full p-3.5 rounded-2xl bg-slate-100/90 border-0 focus:ring-2 focus:ring-sky-500 text-base font-bold text-slate-700 placeholder-slate-400">
-          </div>
-
-          <div class="grid grid-cols-12 gap-3 items-center pt-2">
-            <div class="col-span-5 bg-[#10b981] text-white p-3.5 rounded-2xl flex flex-col justify-center items-center shadow-sm h-full">
-              <span class="text-[11px] font-bold opacity-90">換算單價</span>
-              <span id="unitPricePreview" class="text-base sm:text-lg font-black tracking-tight mt-0.5">$0.00 / ml</span>
-            </div>
-
-            <div class="col-span-7">
-              <button type="submit" class="w-full h-full bg-[#0284c7] hover:bg-sky-700 active:bg-sky-800 text-white font-black py-4 px-2 rounded-2xl shadow-md transition text-base sm:text-lg tracking-wide">
-                儲存記錄至雲端
-              </button>
-            </div>
-          </div>
-        </form>
-      </div>
-    </section>
-
-    <!-- TAB 4: Dashboard View -->
-    <section id="tab-dashboard" class="space-y-4 hidden">
-      <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 space-y-4">
-        <div class="flex justify-between items-center">
-          <h3 class="font-extrabold text-slate-800 text-lg flex items-center gap-2">
-            <i data-lucide="store" class="w-6 h-6 text-emerald-600"></i> 通路 CP 值大比拼
-          </h3>
-          <span class="text-xs bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full font-extrabold">最省錢賣場</span>
-        </div>
-        <p class="text-sm text-slate-500 font-bold">統計歷史紀錄中，各賣場擁有「最低價商品」的次數排名：</p>
-        <div id="storeCpRankingList" class="space-y-4 pt-1"></div>
-      </div>
-
-      <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 space-y-3">
-        <h3 class="font-bold text-slate-800 text-base flex items-center gap-1.5">
-          <i data-lucide="download" class="w-5 h-5 text-indigo-600"></i> 資料備份與匯出
-        </h3>
-        <p class="text-xs text-slate-400 leading-relaxed">
-          匯出比價紀錄至本地端，可用 Excel 開啟試算或備份存檔：
-        </p>
-        <div class="grid grid-cols-2 gap-3 pt-1">
-          <button onclick="exportToCSV()" class="bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 py-3.5 px-3 rounded-2xl font-bold text-xs flex items-center justify-center gap-1.5 transition">
-            <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> 匯出 CSV 檔
-          </button>
-          <button onclick="exportToJSON()" class="bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 py-3.5 px-3 rounded-2xl font-bold text-xs flex items-center justify-center gap-1.5 transition">
-            <i data-lucide="file-json" class="w-4 h-4"></i> 匯出 JSON 備份
-          </button>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <!-- 通路管理 Modal -->
-  <div id="storeManageModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-white w-full max-w-sm rounded-3xl p-5 space-y-4 shadow-xl border border-slate-100 max-h-[85vh] flex flex-col">
-      <div class="flex justify-between items-center shrink-0">
-        <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2">
-          <i data-lucide="settings" class="w-5 h-5 text-sky-600"></i> 管理自訂通路
-        </h3>
-        <button onclick="toggleStoreManageModal(false)" class="text-slate-400 hover:text-slate-600">
-          <i data-lucide="x" class="w-6 h-6"></i>
-        </button>
-      </div>
-
-      <!-- 新增/修改區塊 -->
-      <div class="space-y-2 shrink-0 bg-slate-50 p-3 rounded-2xl border border-slate-100">
-        <input type="text" id="newStoreNameInput" placeholder="通路名稱 (例: 美廉社)" class="w-full p-2.5 bg-white rounded-xl text-sm font-bold text-slate-700 border border-slate-200 outline-none focus:ring-2 focus:ring-sky-500">
-        <input type="url" id="newStoreLogoInput" placeholder="Logo 圖片網址 (選填，可之後再補)" class="w-full p-2.5 bg-white rounded-xl text-xs font-bold text-slate-700 border border-slate-200 outline-none focus:ring-2 focus:ring-sky-500">
-        <div class="flex gap-2 pt-1">
-          <button id="addStoreSubmitBtn" onclick="addCustomStore()" class="w-full bg-sky-600 text-white text-xs py-2.5 rounded-xl font-bold hover:bg-sky-700 transition">
-            新增通路
-          </button>
-          <button id="cancelEditStoreBtn" onclick="resetStoreInputForm()" class="hidden w-1/3 bg-slate-200 text-slate-700 text-xs py-2.5 rounded-xl font-bold hover:bg-slate-300 transition">
-            取消
-          </button>
-        </div>
-      </div>
-
-      <!-- 通路列表區塊 -->
-      <div class="overflow-y-auto flex-1 space-y-2 pr-1" id="storeManageList"></div>
-    </div>
+  <div class="sync-box">
+    <input type="text" id="familyCode" placeholder="請輸入家庭代碼">
+    <button onclick="manualSync()">同步</button>
   </div>
 
-  <!-- 家人共用 Modal -->
-  <div id="familyModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-white w-full max-w-sm rounded-3xl p-6 space-y-4 shadow-xl border border-slate-100">
-      <div class="flex justify-between items-center">
-        <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2">
-          <i data-lucide="users" class="w-5 h-5 text-amber-500"></i> 家人共用設定
-        </h3>
-        <button onclick="toggleFamilyModal(false)" class="text-slate-400 hover:text-slate-600">
-          <i data-lucide="x" class="w-6 h-6"></i>
-        </button>
-      </div>
-      
-      <p class="text-xs text-slate-500 leading-relaxed font-bold">
-        輸入或自訂您的群組代碼，與家人共用相同的比價資料！
-      </p>
-
-      <div class="bg-amber-50 border border-amber-200/80 rounded-2xl p-4 space-y-2">
-        <span class="text-xs font-black text-amber-800">目前群組代碼：</span>
-        <div class="flex items-center gap-2">
-          <input type="text" id="familyGroupCode" value="HOME-8899" class="w-full bg-white text-center font-mono font-bold text-amber-700 py-2.5 rounded-xl text-base border border-amber-200 uppercase">
-          <button onclick="copyFamilyCode()" class="bg-amber-600 text-white text-xs px-3.5 py-3 rounded-xl font-bold whitespace-nowrap hover:bg-amber-700 transition">
-            複製
-          </button>
-        </div>
-      </div>
-
-      <div class="space-y-2 pt-2 border-t border-slate-100">
-        <label class="block text-xs font-black text-slate-500">切換或輸入新群組代碼：</label>
-        <div class="flex gap-2">
-          <input type="text" id="joinCodeInput" placeholder="例：MYHOME-168" class="w-full p-3 bg-slate-100 rounded-xl text-base font-bold uppercase text-slate-700">
-          <button onclick="joinFamilyGroup()" class="bg-sky-600 text-white text-xs px-4 py-3 rounded-xl font-bold whitespace-nowrap hover:bg-sky-700 transition">
-            確定切換
-          </button>
-        </div>
-      </div>
-    </div>
+  <div class="tabs">
+    <button class="tab-btn active" id="btnTabBp" onclick="switchTab('bp')">❤️ 血壓</button>
+    <button class="tab-btn" id="btnTabBs" onclick="switchTab('bs')">🩸 血糖</button>
   </div>
 
-  <!-- 編輯比價紀錄 Modal -->
-  <div id="editModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-white w-full max-w-md rounded-3xl p-5 space-y-4 shadow-xl border border-slate-100 max-h-[90vh] overflow-y-auto">
-      <div class="flex justify-between items-center">
-        <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2">
-          <i data-lucide="edit-3" class="w-5 h-5 text-sky-600"></i> 修改比價紀錄
-        </h3>
-        <button onclick="toggleEditModal(false)" class="text-slate-400 hover:text-slate-600">
-          <i data-lucide="x" class="w-6 h-6"></i>
-        </button>
-      </div>
-
-      <form id="editForm" onsubmit="saveEditedRecord(event)" class="space-y-3.5">
-        <input type="hidden" id="editId">
-
-        <div class="grid grid-cols-2 gap-3">
-          <div class="relative">
-            <label class="block text-xs font-black text-slate-600 mb-1">通路</label>
-            <input type="hidden" id="editStore" value="全聯">
-            <button type="button" onclick="toggleCustomDropdown('editStoreDropdown', event)" class="w-full p-3 rounded-xl bg-slate-100 border-0 flex items-center justify-between text-sm font-black text-slate-800">
-              <span id="editStoreSelectedLabel" class="flex items-center gap-2 truncate">
-                <img src="https://i.meee.com.tw/TDGiMEb.png" class="w-4 h-4 rounded-full object-cover shrink-0"> 全聯
-              </span>
-              <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 shrink-0"></i>
-            </button>
-            <div id="editStoreDropdown" class="absolute left-0 right-0 mt-1 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 max-h-60 overflow-y-auto hidden"></div>
-          </div>
-
-          <div>
-            <label class="block text-xs font-black text-slate-600 mb-1">日期</label>
-            <input type="date" id="editDate" required class="w-full p-3 rounded-xl bg-slate-100 border-0 text-sm font-black text-slate-800">
-          </div>
-        </div>
-
-        <div class="grid grid-cols-12 gap-2">
-          <div class="col-span-7">
-            <label class="block text-xs font-black text-slate-600 mb-1">商品名稱</label>
-            <input type="text" id="editName" required class="w-full p-3 rounded-xl bg-slate-100 border-0 text-sm font-black text-slate-800">
-          </div>
-          <div class="col-span-5">
-            <label class="block text-xs font-black text-slate-600 mb-1">類別</label>
-            <select id="editCategory" class="w-full p-3 rounded-xl bg-slate-100 border-0 text-sm font-black text-slate-800">
-              <option value="肉品">肉品</option>
-              <option value="蔬菜">蔬菜</option>
-              <option value="餅乾">餅乾</option>
-              <option value="飲料/沖泡粉">飲料/沖泡粉</option>
-              <option value="乾糧/罐頭">乾糧/罐頭</option>
-              <option value="冷藏/冷凍">冷藏/冷凍</option>
-              <option value="清潔用品">清潔用品</option>
-              <option value="保養/美妝">保養/美妝</option>
-              <option value="生活用品" selected>生活用品</option>
-              <option value="藥品/保健品">藥品/保健品</option>
-              <option value="其他">其他</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-12 gap-2">
-          <div class="col-span-4">
-            <label class="block text-xs font-black text-slate-600 mb-1">金額</label>
-            <input type="number" step="0.1" id="editPrice" required class="w-full p-3 rounded-xl bg-slate-100 border-0 text-sm font-black text-slate-800">
-          </div>
-          <div class="col-span-5">
-            <label class="block text-xs font-black text-slate-600 mb-1">數量</label>
-            <input type="number" step="0.01" id="editQty" required class="w-full p-3 rounded-xl bg-slate-100 border-0 text-sm font-black text-slate-800">
-          </div>
-          <div class="col-span-3">
-            <label class="block text-xs font-black text-slate-600 mb-1">單位</label>
-            <select id="editUnit" class="w-full p-3 rounded-xl bg-slate-100 border-0 text-sm font-black text-slate-800">
-              <option value="ml">ml</option>
-              <option value="g">g</option>
-              <option value="罐">罐</option>
-              <option value="包">包</option>
-              <option value="個">個</option>
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-xs font-black text-slate-600 mb-1">備註</label>
-          <input type="text" id="editNote" class="w-full p-3 rounded-xl bg-slate-100 border-0 text-sm font-bold text-slate-700">
-        </div>
-
-        <div class="flex gap-2 pt-2">
-          <button type="button" onclick="toggleEditModal(false)" class="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 py-3.5 rounded-2xl font-bold transition text-sm">
-            取消
-          </button>
-          <button type="submit" class="w-1/2 bg-sky-600 hover:bg-sky-700 text-white py-3.5 rounded-2xl font-black transition text-sm shadow-sm">
-            儲存修改
-          </button>
-        </div>
-      </form>
+  <!-- 血壓表單 -->
+  <div id="formBp">
+    <div class="form-group">
+      <input type="number" id="sys" placeholder="收縮壓 (高)">
+      <input type="number" id="dia" placeholder="舒張壓 (低)">
     </div>
+    <div class="form-group">
+      <input type="number" id="bpm" placeholder="心跳 (選填)">
+      <select id="bpPeriod">
+        <option value="早上">早上</option>
+        <option value="晚上">晚上</option>
+        <option value="睡前">睡前</option>
+      </select>
+    </div>
+    <button class="submit-btn btn-bp" onclick="saveBP()">儲存血壓資料</button>
   </div>
 
-  <!-- Bottom Navigation -->
-  <nav class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-100 py-3 px-6 z-30 shadow-lg">
-    <div class="max-w-md mx-auto flex justify-around items-end">
-      <button onclick="switchTab('search')" id="nav-search" class="flex flex-col items-center gap-1 text-slate-400 hover:text-sky-600 transition">
-        <i data-lucide="search" class="w-6 h-6"></i>
-        <span class="text-xs font-bold">查價格</span>
-      </button>
-
-      <button onclick="switchTab('add')" id="nav-add" class="flex flex-col items-center gap-1 -mt-7">
-        <div class="bg-[#0984e3] text-white rounded-full p-3.5 shadow-lg shadow-sky-400/40 hover:bg-sky-600 transition flex items-center justify-center w-14 h-14">
-          <i data-lucide="plus" class="w-8 h-8 stroke-[3]"></i>
-        </div>
-        <span class="text-xs font-bold text-sky-600">記一筆</span>
-      </button>
-
-      <button onclick="switchTab('dashboard')" id="nav-dashboard" class="flex flex-col items-center gap-1 text-slate-400 hover:text-sky-600 transition">
-        <i data-lucide="trending-up" class="w-6 h-6"></i>
-        <span class="text-xs font-bold">分析</span>
-      </button>
+  <!-- 血糖表單 -->
+  <div id="formBs" style="display: none;">
+    <div class="form-group single">
+      <input type="number" id="glucose" placeholder="血糖值 (mg/dL)">
     </div>
-  </nav>
+    <div class="form-group single">
+      <select id="bsPeriod">
+        <option value="飯前 (空腹)">飯前 (空腹)</option>
+        <option value="飯後 2 小時">飯後 2 小時</option>
+        <option value="睡前">睡前</option>
+        <option value="隨機">隨機</option>
+      </select>
+    </div>
+    <button class="submit-btn btn-bs" onclick="saveBS()">儲存血糖資料</button>
+  </div>
 
-  <!-- JavaScript -->
-  <script>
-    const SUPABASE_URL = "https://qttmyftslivdjxhetcjb.supabase.co"; 
-    const SUPABASE_KEY = "sb_publishable_IzevHVXG4LTgTF3BzLR20g_j12bgO2s"; 
+  <div class="history-title">
+    <span id="historyHeading">📊 歷史紀錄 (血壓)</span>
+  </div>
 
-    let db = null;
+  <div class="filter-box">
+    <button class="filter-btn active" id="f-30" onclick="setFilter(30)">近 30 天</button>
+    <button class="filter-btn" id="f-180" onclick="setFilter(180)">近 180 天</button>
+    <button class="filter-btn" id="f-0" onclick="setFilter(0)">全部紀錄</button>
+  </div>
+
+  <div id="historyList">載入中...</div>
+</div>
+
+<div class="modal-overlay" id="customModal">
+  <div class="modal-box">
+    <div class="modal-msg" id="modalMsg">提示訊息</div>
+    <div class="modal-buttons" id="modalButtons">
+      <button class="modal-btn" onclick="closeModal()">確定</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // 註冊 Service Worker 進行離線頁面快取
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js')
+        .then(reg => console.log('Service Worker 註冊成功'))
+        .catch(err => console.log('Service Worker 註冊失敗:', err));
+    });
+  }
+
+  const SUPABASE_URL = 'https://qttmyftslivdjxhetcjb.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_IzevHVXG4LTgTF3BzLR20g_j12bgO2s';
+
+  let db = null;
+  let currentTab = 'bp';
+  let filterDays = 30;
+
+  function initSupabase() {
+    if (typeof supabase === 'undefined') return false;
+    if (!SUPABASE_KEY || SUPABASE_KEY.includes('請在此處貼上')) return false;
+    if (!db) {
+      db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    }
+    return true;
+  }
+
+  function updateNetworkStatus() {
+    const banner = document.getElementById('networkBanner');
+    if (navigator.onLine) {
+      banner.style.display = 'none';
+      syncOfflineQueue();
+    } else {
+      banner.style.display = 'block';
+    }
+  }
+
+  window.addEventListener('online', updateNetworkStatus);
+  window.addEventListener('offline', updateNetworkStatus);
+
+  function closeApp() {
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      window.close();
+    }
+    setTimeout(() => {
+      showAlert('請由螢幕底部向上滑動，或按下主畫面按鈕即可離開應用程式喔！');
+    }, 300);
+  }
+
+  function showAlert(msg) {
+    document.getElementById('modalMsg').innerText = msg;
+    document.getElementById('modalButtons').innerHTML = `
+      <button class="modal-btn" onclick="closeModal()">確定</button>
+    `;
+    document.getElementById('customModal').style.display = 'flex';
+  }
+
+  function showConfirm(msg, onConfirm) {
+    document.getElementById('modalMsg').innerText = msg;
+    document.getElementById('modalButtons').innerHTML = `
+      <button class="modal-btn cancel" onclick="closeModal()">取消</button>
+      <button class="modal-btn danger" id="confirmBtn">刪除</button>
+    `;
+    document.getElementById('confirmBtn').onclick = () => {
+      closeModal();
+      onConfirm();
+    };
+    document.getElementById('customModal').style.display = 'flex';
+  }
+
+  function closeModal() {
+    document.getElementById('customModal').style.display = 'none';
+  }
+
+  function setFilter(days) {
+    filterDays = days;
+    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(`f-${days}`).classList.add('active');
+    loadData();
+  }
+
+  function switchTab(type) {
+    currentTab = type;
+    const btnBp = document.getElementById('btnTabBp');
+    const btnBs = document.getElementById('btnTabBs');
+    const formBp = document.getElementById('formBp');
+    const formBs = document.getElementById('formBs');
+    const heading = document.getElementById('historyHeading');
+
+    if (type === 'bp') {
+      btnBp.classList.add('active');
+      btnBs.classList.remove('active');
+      formBp.style.display = 'block';
+      formBs.style.display = 'none';
+      heading.innerText = '📊 歷史紀錄 (血壓)';
+    } else {
+      btnBs.classList.add('active');
+      btnBp.classList.remove('active');
+      formBp.style.display = 'none';
+      formBs.style.display = 'block';
+      heading.innerText = '📊 歷史紀錄 (血糖)';
+    }
+    loadData();
+  }
+
+  function getOfflineQueue() {
+    return JSON.parse(localStorage.getItem('offline_queue') || '[]');
+  }
+
+  function saveOfflineQueue(queue) {
+    localStorage.setItem('offline_queue', JSON.stringify(queue));
+  }
+
+  async function saveBP() {
+    const codeInput = document.getElementById('familyCode');
+    const code = codeInput.value.trim();
+    if (code) localStorage.setItem('user_family_code', code);
+
+    const sys = parseInt(document.getElementById('sys').value);
+    const dia = parseInt(document.getElementById('dia').value);
+    const bpmValue = document.getElementById('bpm').value.trim();
+    const bpm = bpmValue ? parseInt(bpmValue) : null;
+    const period = document.getElementById('bpPeriod').value;
+
+    if (!code) return showAlert('請輸入家庭代碼！');
+    if (!sys || !dia) return showAlert('請填寫收縮壓與舒張壓！');
+
+    const recordData = {
+      family_code: code,
+      sys: sys,
+      dia: dia,
+      bpm: bpm,
+      period: period,
+      created_at: new Date().toISOString()
+    };
+
+    if (!navigator.onLine || !initSupabase()) {
+      const queue = getOfflineQueue();
+      queue.push({ type: 'bp', data: recordData, tempId: Date.now() });
+      saveOfflineQueue(queue);
+      showAlert('目前無網路，紀錄已暫存本機，待連線後自動同步！');
+      clearBpInputs();
+      loadData();
+      return;
+    }
+
     try {
-      if (typeof window.supabase !== 'undefined' && SUPABASE_URL && !SUPABASE_URL.includes("YOUR_")) {
-        db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      const { error } = await db.from('bp_records').insert([recordData]);
+
+      if (error) {
+        const queue = getOfflineQueue();
+        queue.push({ type: 'bp', data: recordData, tempId: Date.now() });
+        saveOfflineQueue(queue);
+        showAlert('線上儲存失敗，已轉存本機暫存：' + error.message);
+      } else {
+        showAlert('血壓資料已成功儲存！');
       }
-    } catch(e) {
-      console.log("Supabase 未設置");
+      clearBpInputs();
+      loadData();
+    } catch (e) {
+      const queue = getOfflineQueue();
+      queue.push({ type: 'bp', data: recordData, tempId: Date.now() });
+      saveOfflineQueue(queue);
+      showAlert('連線異常，紀錄已暫存本機！');
+      clearBpInputs();
+      loadData();
     }
+  }
 
-    let records = [];
-    let cloudStoresList = []; 
-    let currentDimension = "category"; 
-    let activeCategory = "全部";
-    let activeStore = "全部";
+  function clearBpInputs() {
+    document.getElementById('sys').value = '';
+    document.getElementById('dia').value = '';
+    document.getElementById('bpm').value = '';
+  }
 
-    const categories = ["全部", "肉品", "蔬菜", "餅乾", "飲料/沖泡粉", "乾糧/罐頭", "冷藏/冷凍", "清潔用品", "保養/美妝", "生活用品", "藥品/保健品", "其他"];
+  async function saveBS() {
+    const codeInput = document.getElementById('familyCode');
+    const code = codeInput.value.trim();
+    if (code) localStorage.setItem('user_family_code', code);
 
-    const defaultStores = [
-      "全聯", "萬家福", "愛買", "百興隆", "蝦皮", "北海道", "開南食品", "大發", "Costco", "7-ELEVEN", "全家", "傳統市場", "其他"
-    ];
+    const glucose = parseInt(document.getElementById('glucose').value);
+    const period = document.getElementById('bsPeriod').value;
 
-    const defaultStoreIcons = {
-      "大發": "https://i.meee.com.tw/ns6tytm.png",
-      "開南食品": "https://i.meee.com.tw/ZOdqqDG.jpg",
-      "百興隆": "https://i.meee.com.tw/m7aoD2H.jpg",
-      "北海道生鮮超市": "https://i.meee.com.tw/1THSTTq.jpg",
-      "北海道": "https://i.meee.com.tw/1THSTTq.jpg",
-      "蝦皮購物": "https://i.meee.com.tw/ESWDPdD.jpg",
-      "蝦皮": "https://i.meee.com.tw/ESWDPdD.jpg",
-      "愛買": "https://i.meee.com.tw/AhDxMfu.jpg",
-      "萬家福": "https://i.meee.com.tw/sa4r1mQ.jpg",
-      "全聯": "https://i.meee.com.tw/TDGiMEb.png",
-      "Costco": "https://i.meee.com.tw/3BF28DH.jpg",
-      "7-11": "https://i.meee.com.tw/h5EYgxR.jpg",
-      "7-ELEVEN": "https://i.meee.com.tw/h5EYgxR.jpg",
-      "全家": "https://i.meee.com.tw/MjZqaNI.jpg",
-      "菜市場": "https://i.meee.com.tw/2260eyW.png",
-      "傳統市場": "https://i.meee.com.tw/2260eyW.png",
-      "其他": "https://i.meee.com.tw/GMoXw4p.jpg",
-      "預設": "https://i.meee.com.tw/GMoXw4p.jpg"
+    if (!code) return showAlert('請輸入家庭代碼！');
+    if (!glucose) return showAlert('請輸入血糖值！');
+
+    const recordData = {
+      family_code: code,
+      glucose: glucose,
+      period: period,
+      created_at: new Date().toISOString()
     };
 
-    function getCurrentGroupCode() {
-      return localStorage.getItem('pwa_group_code') || 'HOME-8899';
+    if (!navigator.onLine || !initSupabase()) {
+      const queue = getOfflineQueue();
+      queue.push({ type: 'bs', data: recordData, tempId: Date.now() });
+      saveOfflineQueue(queue);
+      showAlert('目前無網路，紀錄已暫存本機，待連線後自動同步！');
+      document.getElementById('glucose').value = '';
+      loadData();
+      return;
     }
 
-    function updateGroupUI() {
-      const code = getCurrentGroupCode();
-      const codeInput = document.getElementById('familyGroupCode');
-      const headerLabel = document.getElementById('headerGroupLabel');
-      if (codeInput) codeInput.value = code;
-      if (headerLabel) headerLabel.innerText = code;
-    }
+    try {
+      const { error } = await db.from('bs_records').insert([recordData]);
 
-    function getStoreOptionsList() {
-      if (cloudStoresList.length > 0) {
-        return cloudStoresList.map(s => s.name);
+      if (error) {
+        const queue = getOfflineQueue();
+        queue.push({ type: 'bs', data: recordData, tempId: Date.now() });
+        saveOfflineQueue(queue);
+        showAlert('線上儲存失敗，已轉存本機暫存：' + error.message);
+      } else {
+        showAlert('血糖資料已成功儲存！');
       }
-      const saved = localStorage.getItem('custom_store_list');
-      if (saved) {
-        try { return JSON.parse(saved); } catch(e) {}
-      }
-      return [...defaultStores];
+      document.getElementById('glucose').value = '';
+      loadData();
+    } catch (e) {
+      const queue = getOfflineQueue();
+      queue.push({ type: 'bs', data: recordData, tempId: Date.now() });
+      saveOfflineQueue(queue);
+      showAlert('連線異常，紀錄已暫存本機！');
+      document.getElementById('glucose').value = '';
+      loadData();
     }
+  }
 
-    function getStoreLogoUrl(storeName) {
-      if (cloudStoresList.length > 0) {
-        const found = cloudStoresList.find(s => s.name === storeName);
-        if (found && found.logo_url) return found.logo_url;
-      }
-      const savedIcons = localStorage.getItem('custom_store_icons');
-      if (savedIcons) {
-        try {
-          const map = JSON.parse(savedIcons);
-          if (map[storeName]) return map[storeName];
-        } catch(e) {}
-      }
-      return defaultStoreIcons[storeName] || defaultStoreIcons["預設"];
-    }
+  async function syncOfflineQueue() {
+    if (!navigator.onLine || !initSupabase()) return;
 
-    function formatWesternDate(dateStr) {
-      if (!dateStr) return '';
-      const parts = dateStr.split('-');
-      if (parts.length < 3) return dateStr;
-      const year = parseInt(parts[0], 10);
-      const month = parseInt(parts[1], 10);
-      const day = parseInt(parts[2], 10);
-      return `${year}年${month}月${day}日`;
-    }
+    const queue = getOfflineQueue();
+    if (queue.length === 0) return;
 
-    window.onload = function() {
-      lucide.createIcons();
-      updateGroupUI();
-      
-      const dateEl = document.getElementById('inputDate');
-      if (dateEl) {
-        dateEl.value = new Date().toISOString().split('T')[0];
-      }
+    const remainingQueue = [];
+    let syncedCount = 0;
 
-      fetchStoresAndRecords();
-      registerServiceWorker();
-    };
-
-    async function fetchStoresAndRecords() {
-      await fetchCustomStoresFromCloud();
-      await fetchRecords();
-    }
-
-    async function fetchCustomStoresFromCloud() {
-      const currentGroup = getCurrentGroupCode();
-      if (!db) return;
-
+    for (const item of queue) {
+      const tableName = (item.type === 'bp') ? 'bp_records' : 'bs_records';
       try {
-        const { data, error } = await db.from('store_options').select('*').eq('group_code', currentGroup).order('id', { ascending: true });
-        if (error) throw error;
-
-        if (data && data.length > 0) {
-          cloudStoresList = data.map(d => ({ name: d.name, logo_url: d.logo_url || '', id: d.id }));
+        const { error } = await db.from(tableName).insert([item.data]);
+        if (error) {
+          remainingQueue.push(item);
         } else {
-          cloudStoresList = defaultStores.map(s => ({ name: s, logo_url: defaultStoreIcons[s] || '' }));
-          for (let s of cloudStoresList) {
-            await db.from('store_options').insert([{ group_code: currentGroup, name: s.name, logo_url: s.logo_url }]);
-          }
+          syncedCount++;
         }
-      } catch (err) {
-        console.log("讀取雲端通路失敗，使用本機快取:", err);
-      }
-
-      refreshDropdownsAfterManage();
-      renderFilterPills();
-    }
-
-    function switchFilterDimension(dim) {
-      currentDimension = dim;
-      const catBtn = document.getElementById('dim-btn-category');
-      const storeBtn = document.getElementById('dim-btn-store');
-
-      if (dim === 'category') {
-        catBtn.className = "flex-1 py-2.5 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 bg-white text-sky-700 shadow-sm";
-        storeBtn.className = "flex-1 py-2.5 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 text-slate-500 hover:text-slate-800";
-      } else {
-        storeBtn.className = "flex-1 py-2.5 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 bg-white text-sky-700 shadow-sm";
-        catBtn.className = "flex-1 py-2.5 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 text-slate-500 hover:text-slate-800";
-      }
-
-      renderFilterPills();
-      renderRecords();
-    }
-
-    function renderFilterPills() {
-      const container = document.getElementById('filterPills');
-      if (!container) return;
-
-      if (currentDimension === 'category') {
-        container.innerHTML = categories.map(cat => `
-          <button onclick="selectCategory('${cat}')"
-                  class="px-4 py-2 rounded-2xl text-xs font-extrabold whitespace-nowrap transition shadow-sm ${
-                    activeCategory === cat 
-                      ? 'bg-emerald-600 text-white shadow-md' 
-                      : 'bg-white text-slate-600 border border-slate-200'
-                  }">
-            ${cat}
-          </button>
-        `).join('');
-      } else {
-        const stores = ["全部", ...getStoreOptionsList()];
-        container.innerHTML = stores.map(store => {
-          const isSelected = (activeStore === store);
-          if (store === "全部") {
-            return `
-              <button onclick="selectStore('全部')"
-                      class="px-4 py-2 rounded-2xl text-xs font-extrabold whitespace-nowrap transition shadow-sm ${
-                        isSelected 
-                          ? 'bg-sky-600 text-white shadow-md' 
-                          : 'bg-white text-slate-600 border border-slate-200'
-                      }">
-                全部
-              </button>
-            `;
-          }
-
-          const logoUrl = getStoreLogoUrl(store);
-          return `
-            <button onclick="selectStore('${store}')"
-                    class="px-3 py-1.5 rounded-2xl text-xs font-extrabold whitespace-nowrap transition shadow-sm flex items-center gap-1.5 shrink-0 ${
-                      isSelected 
-                        ? 'bg-sky-600 text-white shadow-md' 
-                        : 'bg-white text-slate-600 border border-slate-200'
-                    }">
-              <img src="${logoUrl}" class="w-4 h-4 rounded-full object-cover shrink-0 border border-slate-100">
-              <span class="truncate max-w-[100px]">${store}</span>
-            </button>
-          `;
-        }).join('');
+      } catch (e) {
+        remainingQueue.push(item);
       }
     }
 
-    function selectCategory(cat) {
-      activeCategory = cat;
-      renderFilterPills();
-      renderRecords();
+    saveOfflineQueue(remainingQueue);
+
+    if (syncedCount > 0) {
+      showAlert(`已成功自動同步 ${syncedCount} 筆離線紀錄！`);
+      loadData();
     }
+  }
 
-    function selectStore(store) {
-      activeStore = store;
-      renderFilterPills();
-      renderRecords();
+  function manualSync() {
+    if (navigator.onLine) {
+      syncOfflineQueue();
+      loadData();
+    } else {
+      showAlert('目前處於離線狀態，無法進行線上同步！');
     }
+  }
 
-    function buildCustomDropdown(dropdownId, hiddenInputId, labelId, selectedValue) {
-      const dropdown = document.getElementById(dropdownId);
-      if (!dropdown) return;
-
-      const currentList = getStoreOptionsList();
-      const listHtml = currentList.map(store => {
-        const logo = getStoreLogoUrl(store);
-        const isSelected = (store === selectedValue);
-        return `
-          <div onclick="selectCustomOption('${dropdownId}', '${hiddenInputId}', '${labelId}', '${store}')"
-               class="flex items-center gap-3 px-4 py-3 hover:bg-sky-50 cursor-pointer font-bold text-slate-700 transition ${isSelected ? 'bg-sky-50/80 text-sky-700' : ''}">
-            <img src="${logo}" class="w-5 h-5 rounded-full object-cover shrink-0 shadow-xs border border-slate-200">
-            <span>${store}</span>
-          </div>
-        `;
-      }).join('');
-
-      const manageBtnHtml = `
-        <div onclick="openStoreManageModal('${dropdownId}', '${hiddenInputId}', '${labelId}')" 
-             class="sticky bottom-0 bg-slate-50 hover:bg-slate-100 p-3 text-center text-xs font-black text-sky-600 border-t border-slate-100 cursor-pointer flex items-center justify-center gap-1.5">
-          <i data-lucide="settings" class="w-3.5 h-3.5"></i> 管理 / 新增通路
-        </div>
-      `;
-
-      dropdown.innerHTML = listHtml + manageBtnHtml;
-      lucide.createIcons();
-    }
-
-    function toggleCustomDropdown(dropdownId, event) {
-      if (event) event.stopPropagation();
-      ['addStoreDropdown', 'editStoreDropdown'].forEach(id => {
-        if (id !== dropdownId) document.getElementById(id)?.classList.add('hidden');
-      });
-      const el = document.getElementById(dropdownId);
-      if (el) el.classList.toggle('hidden');
-    }
-
-    function selectCustomOption(dropdownId, hiddenInputId, labelId, storeName) {
-      document.getElementById(hiddenInputId).value = storeName;
-      const logo = getStoreLogoUrl(storeName);
-      document.getElementById(labelId).innerHTML = `
-        <img src="${logo}" class="w-5 h-5 rounded-full object-cover shrink-0"> ${storeName}
-      `;
-      document.getElementById(dropdownId).classList.add('hidden');
-      if (dropdownId === 'addStoreDropdown') {
-        checkDealAlert();
-      }
-    }
-
-    function closeAllCustomDropdowns(event) {
-      if (!event.target.closest('.relative')) {
-        document.getElementById('addStoreDropdown')?.classList.add('hidden');
-        document.getElementById('editStoreDropdown')?.classList.add('hidden');
-      }
-    }
-
-    let editingStoreTarget = null;
-
-    function openStoreManageModal(dropdownId, hiddenInputId, labelId) {
-      document.getElementById('addStoreDropdown')?.classList.add('hidden');
-      document.getElementById('editStoreDropdown')?.classList.add('hidden');
-      resetStoreInputForm();
-      renderStoreManageList();
-      toggleStoreManageModal(true);
-    }
-
-    function toggleStoreManageModal(show) {
-      document.getElementById('storeManageModal').classList.toggle('hidden', !show);
-    }
-
-    function renderStoreManageList() {
-      const container = document.getElementById('storeManageList');
-      if (!container) return;
-
-      const list = getStoreOptionsList();
-      container.innerHTML = list.map(store => {
-        const logo = getStoreLogoUrl(store);
-        return `
-          <div class="flex justify-between items-center bg-slate-50 p-3 rounded-2xl border border-slate-100">
-            <div class="flex items-center gap-2.5 font-bold text-slate-700 text-sm truncate pr-2">
-              <img src="${logo}" class="w-5 h-5 rounded-full object-cover shrink-0 border border-slate-200">
-              <span class="truncate">${store}</span>
-            </div>
-            <div class="flex items-center gap-1 shrink-0">
-              <button onclick="startEditStore('${store}')" class="text-slate-400 hover:text-sky-600 p-1.5 transition" title="編輯 Logo 或名稱">
-                <i data-lucide="edit-3" class="w-4 h-4"></i>
-              </button>
-              <button onclick="removeCustomStore('${store}')" class="text-slate-400 hover:text-rose-500 p-1.5 transition" title="刪除">
-                <i data-lucide="trash-2" class="w-4 h-4"></i>
-              </button>
-            </div>
-          </div>
-        `;
-      }).join('');
-      lucide.createIcons();
-    }
-
-    function startEditStore(storeName) {
-      editingStoreTarget = storeName;
-      const currentLogo = getStoreLogoUrl(storeName);
-      const isDefaultLogo = Object.values(defaultStoreIcons).includes(currentLogo);
-
-      document.getElementById('newStoreNameInput').value = storeName;
-      document.getElementById('newStoreLogoInput').value = isDefaultLogo ? '' : currentLogo;
-
-      document.getElementById('addStoreSubmitBtn').innerText = '儲存修改';
-      document.getElementById('cancelEditStoreBtn').classList.remove('hidden');
-    }
-
-    function resetStoreInputForm() {
-      editingStoreTarget = null;
-      document.getElementById('newStoreNameInput').value = '';
-      document.getElementById('newStoreLogoInput').value = '';
-      document.getElementById('addStoreSubmitBtn').innerText = '新增通路';
-      document.getElementById('cancelEditStoreBtn').classList.add('hidden');
-    }
-
-    async function addCustomStore() {
-      const nameInput = document.getElementById('newStoreNameInput');
-      const logoInput = document.getElementById('newStoreLogoInput');
-
-      const newName = nameInput.value.trim();
-      const newLogo = logoInput.value.trim();
-      const currentGroup = getCurrentGroupCode();
-
-      if (!newName) {
-        alert('請輸入通路名稱！');
+  function confirmDelete(id, isOffline = false, tempId = null) {
+    showConfirm('確定要刪除這筆紀錄嗎？\n(刪除後無法復原喔！)', async () => {
+      if (isOffline) {
+        let queue = getOfflineQueue();
+        queue = queue.filter(item => item.tempId !== tempId);
+        saveOfflineQueue(queue);
+        loadData();
         return;
       }
 
-      let currentList = getStoreOptionsList();
-
-      if (editingStoreTarget) {
-        if (db) {
-          try {
-            await db.from('store_options').update({ name: newName, logo_url: newLogo }).eq('group_code', currentGroup).eq('name', editingStoreTarget);
-          } catch(e) { console.error("雲端更新通路失敗", e); }
-        }
-      } else {
-        if (currentList.includes(newName)) {
-          alert('此通路名稱已存在！');
-          return;
-        }
-
-        if (db) {
-          try {
-            await db.from('store_options').insert([{ group_code: currentGroup, name: newName, logo_url: newLogo }]);
-          } catch(e) { console.error("雲端新增通路失敗", e); }
-        }
+      if (!navigator.onLine || !initSupabase()) {
+        return showAlert('離線狀態下無法刪除雲端已同步的紀錄！');
       }
 
-      await fetchCustomStoresFromCloud();
-      resetStoreInputForm();
-      renderStoreManageList();
-    }
-
-    async function removeCustomStore(storeName) {
-      if (!confirm(`確定要移除「${storeName}」嗎？`)) return;
-      const currentGroup = getCurrentGroupCode();
-
-      if (db) {
-        try {
-          await db.from('store_options').delete().eq('group_code', currentGroup).eq('name', storeName);
-        } catch(e) { console.error("雲端刪除通路失敗", e); }
-      }
-
-      await fetchCustomStoresFromCloud();
-      renderStoreManageList();
-    }
-
-    function refreshDropdownsAfterManage() {
-      const list = getStoreOptionsList();
-      const currentAddStore = document.getElementById('inputStore').value;
-      const currentEditStore = document.getElementById('editStore').value;
-
-      const safeAddStore = list.includes(currentAddStore) ? currentAddStore : (list[0] || '全聯');
-      selectCustomOption('addStoreDropdown', 'inputStore', 'addStoreSelectedLabel', safeAddStore);
-      buildCustomDropdown('addStoreDropdown', 'inputStore', 'addStoreSelectedLabel', safeAddStore);
-
-      const safeEditStore = list.includes(currentEditStore) ? currentEditStore : (list[0] || '全聯');
-      selectCustomOption('editStoreDropdown', 'editStore', 'editStoreSelectedLabel', safeEditStore);
-      buildCustomDropdown('editStoreDropdown', 'editStore', 'editStoreSelectedLabel', safeEditStore);
-    }
-
-    async function fetchRecords() {
-      const statusEl = document.getElementById('cloudStatus');
-      const currentGroup = getCurrentGroupCode();
-
-      if (!db) {
-        if (statusEl) statusEl.innerHTML = `<i data-lucide="cloud" class="w-3 h-3"></i> 雲端同步 (${currentGroup})`;
-        lucide.createIcons();
-        renderRecords();
-        updateDashboardData();
-        return;
-      }
-
+      const tableName = (currentTab === 'bp') ? 'bp_records' : 'bs_records';
       try {
-        const { data, error } = await db.from('price_records').select('*').eq('group_code', currentGroup).order('id', { ascending: false });
-        if (error) throw error;
-        records = data || [];
-        if (statusEl) statusEl.innerHTML = `<i data-lucide="cloud" class="w-3 h-3"></i> 雲端同步 (${currentGroup})`;
-        renderRecords();
-        updateDashboardData();
-        checkDealAlert();
-      } catch (err) {
-        console.error("雲端讀取失敗:", err);
-        if (statusEl) statusEl.innerHTML = `<i data-lucide="cloud-off" class="w-3 h-3"></i> 同步失敗`;
-        renderRecords();
-        updateDashboardData();
-      }
-    }
-
-    function getMinUnitPriceMap() {
-      const minMap = {};
-      records.forEach(r => {
-        const key = r.name.trim();
-        const numPrice = r.unit_price_num || (r.price / r.qty);
-        if (!minMap[key] || numPrice < minMap[key].val) {
-          minMap[key] = {
-            val: numPrice,
-            store: r.store,
-            unit: r.unit,
-            str: r.unit_price_str
-          };
-        }
-      });
-      return minMap;
-    }
-
-    function renderRecords() {
-      const searchInput = document.getElementById('searchInput');
-      const searchKeyword = searchInput ? searchInput.value.trim().toLowerCase() : '';
-      const minMap = getMinUnitPriceMap();
-
-      const filtered = records.filter(r => {
-        let matchFilter = true;
-        if (currentDimension === 'category') {
-          matchFilter = (activeCategory === "全部") || (r.category === activeCategory);
+        const { error } = await db.from(tableName).delete().eq('id', id);
+        if (error) {
+          showAlert('刪除失敗：' + error.message);
         } else {
-          matchFilter = (activeStore === "全部") || (r.store === activeStore);
+          loadData();
         }
-
-        const matchSearch = !searchKeyword || 
-          (r.name && r.name.toLowerCase().includes(searchKeyword)) ||
-          (r.note && r.note.toLowerCase().includes(searchKeyword));
-
-        return matchFilter && matchSearch;
-      });
-
-      const countText = document.getElementById('recordCountText');
-      if (countText) countText.innerText = `共 ${filtered.length} 筆比價紀錄`;
-
-      const listContainer = document.getElementById('priceList');
-      if (!listContainer) return;
-
-      if (filtered.length === 0) {
-        listContainer.innerHTML = `<div class="text-center py-10 bg-white rounded-2xl text-sm font-bold text-slate-400">尚無相關紀錄</div>`;
-        return;
+      } catch (e) {
+        showAlert('刪除失敗：' + e.message);
       }
+    });
+  }
 
-      listContainer.innerHTML = filtered.map(r => {
-        const numPrice = r.unit_price_num || (r.price / r.qty);
-        const minObj = minMap[r.name.trim()];
-        const isLowest = minObj && Math.abs(numPrice - minObj.val) < 0.0001;
-        const displayDate = formatWesternDate(r.date);
-        const logoUrl = getStoreLogoUrl(r.store);
+  function getPeriodStyle(period) {
+    if (!period) return { class: 'bar-default', text: '一般' };
+    if (period.includes('早上') || period.includes('飯前')) {
+      return { class: 'bar-morning', text: period.includes('飯前') ? '飯前' : '早上' };
+    }
+    if (period.includes('晚上') || period.includes('飯後')) {
+      return { class: 'bar-evening', text: period.includes('飯後') ? '飯後' : '晚上' };
+    }
+    if (period.includes('睡前')) {
+      return { class: 'bar-bedtime', text: '睡前' };
+    }
+    return { class: 'bar-default', text: period };
+  }
 
-        return `
-          <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col gap-2.5 relative overflow-hidden">
-            <div class="flex justify-between items-start gap-3">
-              <div class="flex items-center space-x-2 flex-wrap min-w-0 pr-2">
-                <span class="font-bold text-slate-800 text-base break-words">${r.name}</span>
-                <span class="text-xs px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded-md font-medium shrink-0">${r.category || '生活用品'}</span>
+  async function loadData() {
+    const listEl = document.getElementById('historyList');
+
+    const codeInput = document.getElementById('familyCode');
+    let code = codeInput.value.trim();
+
+    if (!code) {
+      code = localStorage.getItem('user_family_code') || 'LOVE88';
+      codeInput.value = code;
+    } else {
+      localStorage.setItem('user_family_code', code);
+    }
+
+    const offlineQueue = getOfflineQueue().filter(item => item.type === currentTab && item.data.family_code === code);
+
+    let queryDate = null;
+    if (filterDays > 0) {
+      const d = new Date();
+      d.setDate(d.getDate() - filterDays);
+      queryDate = d.toISOString();
+    }
+
+    let cloudData = [];
+    let isCloudLoaded = false;
+
+    if (navigator.onLine && initSupabase()) {
+      try {
+        const tableName = (currentTab === 'bp') ? 'bp_records' : 'bs_records';
+        let query = db.from(tableName).select('*').eq('family_code', code);
+        
+        if (queryDate) {
+          query = query.gte('created_at', queryDate);
+        }
+        
+        const { data, error } = await query.order('created_at', { ascending: false }).limit(100);
+
+        if (!error && data) {
+          cloudData = data;
+          isCloudLoaded = true;
+          localStorage.setItem(`cache_${currentTab}_${code}`, JSON.stringify(cloudData));
+        }
+      } catch (e) {
+        console.warn('線上讀取失敗，使用快取資料');
+      }
+    }
+
+    if (!isCloudLoaded) {
+      cloudData = JSON.parse(localStorage.getItem(`cache_${currentTab}_${code}`) || '[]');
+    }
+
+    if (cloudData.length === 0 && offlineQueue.length === 0) {
+      listEl.innerHTML = '此時間範圍內尚無紀錄';
+      return;
+    }
+
+    let html = '';
+
+    // 渲染離線佇列
+    offlineQueue.forEach(item => {
+      const r = item.data;
+      const dateObj = new Date(r.created_at);
+      const timeStr = dateObj.toLocaleString('zh-TW', { hour12: false, month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+      const periodInfo = getPeriodStyle(r.period);
+
+      if (currentTab === 'bp') {
+        const bpmHtml = r.bpm ? `<div style="font-size: 0.95rem; color: #64748b; margin-top: 2px;">心跳：${r.bpm} <small>BPM</small></div>` : '';
+        html += `
+          <div class="record-item offline-item">
+            <div class="period-bar ${periodInfo.class}">${periodInfo.text}</div>
+            <div class="record-content">
+              <div class="record-header">
+                <span class="record-time">🕒 ${timeStr}</span>
+                <span class="tag bg-pending">待同步</span>
               </div>
-              <div class="flex items-center space-x-3 text-slate-400 shrink-0">
-                <button onclick="openEditModal(${r.id})" title="修改紀錄" class="hover:text-sky-600 transition"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
-                <button onclick="deleteRecord(${r.id})" title="刪除紀錄" class="hover:text-rose-500 transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-              </div>
-            </div>
-
-            <div class="flex items-center justify-between text-xs font-bold text-slate-500 overflow-hidden">
-              <div class="flex items-center space-x-1.5 truncate">
-                <img src="${logoUrl}" alt="${r.store}" class="w-4 h-4 rounded-full object-cover inline-block shrink-0 shadow-xs border border-slate-100">
-                <span class="text-slate-700">${r.store || ''}</span>
-                <span>•</span>
-                <span>金額 $${r.price} / ${r.qty}${r.unit}</span>
-              </div>
-              ${isLowest ? `
-              <div class="shrink-0 ml-2">
-                <span class="text-xs bg-amber-50 text-amber-600 border border-amber-200 px-2 py-0.5 rounded-full flex items-center space-x-1 font-medium shadow-sm">
-                  <span>🔥</span><span>歷史最低</span>
-                </span>
-              </div>` : ''}
-            </div>
-
-            ${r.note ? `
-            <div class="flex items-center flex-wrap gap-2 pt-0.5">
-              <div class="inline-flex items-center gap-1 text-xs font-bold text-sky-700 bg-sky-50 border border-sky-100 px-2.5 py-1 rounded-xl w-fit">💬 ${r.note}</div>
-            </div>` : ''}
-
-            <div class="flex items-center justify-between text-xs font-medium text-slate-400 pt-1.5 border-t border-slate-100">
-              <span>${displayDate}</span>
-              <div class="bg-emerald-50 text-emerald-700 border border-emerald-200/60 px-2.5 py-0.5 rounded-lg text-xs font-black tracking-tight">
-                $${numPrice.toFixed(2)} / ${r.unit}
+              <div class="record-body">
+                <div>
+                  <div class="record-data">
+                    ${r.sys} / ${r.dia} <small style="font-size: 0.85rem; color: #64748b;">mmHg</small>
+                  </div>
+                  ${bpmHtml}
+                </div>
+                <button class="delete-btn" onclick="confirmDelete(null, true, ${item.tempId})">刪除</button>
               </div>
             </div>
           </div>
         `;
-      }).join('');
-      lucide.createIcons();
-    }
-
-    function openEditModal(id) {
-      const record = records.find(r => r.id === id);
-      if (!record) return;
-
-      const storeVal = record.store || '全聯';
-      document.getElementById('editId').value = record.id;
-      document.getElementById('editStore').value = storeVal;
-      
-      const logo = getStoreLogoUrl(storeVal);
-      document.getElementById('editStoreSelectedLabel').innerHTML = `
-        <img src="${logo}" class="w-4 h-4 rounded-full object-cover shrink-0"> ${storeVal}
-      `;
-      buildCustomDropdown('editStoreDropdown', 'editStore', 'editStoreSelectedLabel', storeVal);
-
-      document.getElementById('editDate').value = record.date || new Date().toISOString().split('T')[0];
-      document.getElementById('editName').value = record.name || '';
-      document.getElementById('editCategory').value = record.category || '生活用品';
-      document.getElementById('editPrice').value = record.price || 0;
-      document.getElementById('editQty').value = record.qty || 1;
-      document.getElementById('editUnit').value = record.unit || 'ml';
-      document.getElementById('editNote').value = record.note || '';
-
-      document.getElementById('editModal').classList.remove('hidden');
-    }
-
-    function toggleEditModal(show) {
-      document.getElementById('editModal').classList.toggle('hidden', !show);
-    }
-
-    async function saveEditedRecord(e) {
-      e.preventDefault();
-      const id = parseInt(document.getElementById('editId').value, 10);
-      const price = parseFloat(document.getElementById('editPrice').value) || 0;
-      const qty = parseFloat(document.getElementById('editQty').value) || 1;
-      const unit = document.getElementById('editUnit').value;
-      const unitNum = price / qty;
-      const unitStr = `$${unitNum.toFixed(2)} / ${unit}`;
-
-      const updatedData = {
-        store: document.getElementById('editStore').value,
-        date: document.getElementById('editDate').value,
-        name: document.getElementById('editName').value.trim(),
-        category: document.getElementById('editCategory').value,
-        price: price,
-        qty: qty,
-        unit: unit,
-        unit_price_num: unitNum,
-        unit_price_str: unitStr,
-        note: document.getElementById('editNote').value.trim()
-      };
-
-      if (db) {
-        try {
-          const { error } = await db.from('price_records').update(updatedData).eq('id', id);
-          if (error) throw error;
-        } catch(err) {
-          console.error("雲端更新失敗", err);
-          alert("雲端更新失敗：" + err.message);
-          return;
-        }
-      }
-
-      const index = records.findIndex(r => r.id === id);
-      if (index !== -1) {
-        records[index] = { ...records[index], ...updatedData };
-      }
-
-      toggleEditModal(false);
-      renderRecords();
-      updateDashboardData();
-    }
-
-    async function deleteRecord(id) {
-      if (!confirm("確定要刪除這筆紀錄嗎？")) return;
-
-      if (db) {
-        try {
-          const { error } = await db.from('price_records').delete().eq('id', id);
-          if (error) throw error;
-        } catch(err) {
-          console.error("雲端刪除失敗", err);
-          alert("雲端刪除失敗：" + err.message);
-          return;
-        }
-      }
-
-      records = records.filter(r => r.id !== id);
-      renderRecords();
-      updateDashboardData();
-    }
-
-    function calculateUnitPrice() {
-      const price = parseFloat(document.getElementById('inputPrice').value) || 0;
-      const qty = parseFloat(document.getElementById('inputQty').value) || 0;
-      const unit = document.getElementById('inputUnit').value;
-      const preview = document.getElementById('unitPricePreview');
-
-      if (price > 0 && qty > 0) {
-        const uPrice = (price / qty).toFixed(2);
-        preview.innerText = `$${uPrice} / ${unit}`;
       } else {
-        preview.innerText = `$0.00 / ${unit}`;
-      }
-    }
-
-    function checkDealAlert() {
-      const name = document.getElementById('inputName').value.trim();
-      const price = parseFloat(document.getElementById('inputPrice').value) || 0;
-      const qty = parseFloat(document.getElementById('inputQty').value) || 0;
-      const unit = document.getElementById('inputUnit').value;
-
-      const banner = document.getElementById('dealAlertBanner');
-      const text = document.getElementById('dealAlertText');
-
-      if (!name || price <= 0 || qty <= 0) {
-        banner.classList.add('hidden');
-        return;
-      }
-
-      const currentUnitPrice = price / qty;
-      const matched = records.filter(r => r.name.trim() === name && r.unit === unit);
-
-      if (matched.length === 0) {
-        banner.className = "p-3.5 rounded-2xl text-xs sm:text-sm font-bold transition-all border flex items-center gap-2 bg-sky-50 border-sky-200 text-sky-700";
-        text.innerText = "ℹ️ 首次記錄此商品，將作為未來的基準比價價格。";
-        banner.classList.remove('hidden');
-        return;
-      }
-
-      const prices = matched.map(r => r.unit_price_num || (r.price / r.qty));
-      const minPrice = Math.min(...prices);
-      const avgPrice = prices.reduce((a, b) => a + b, 0) / prices.length;
-
-      if (currentUnitPrice < minPrice - 0.0001) {
-        banner.className = "p-3.5 rounded-2xl text-xs sm:text-sm font-black transition-all border flex items-center gap-2 bg-emerald-50 border-emerald-300 text-emerald-800 animate-pulse shadow-sm";
-        text.innerText = `🎉 特價警示！單價 $${currentUnitPrice.toFixed(2)} 創下歷史新低（歷史最低 $${minPrice.toFixed(2)}）！`;
-        banner.classList.remove('hidden');
-      } else if (currentUnitPrice > avgPrice * 1.15) {
-        banner.className = "p-3.5 rounded-2xl text-xs sm:text-sm font-black transition-all border flex items-center gap-2 bg-amber-50 border-amber-300 text-amber-800";
-        text.innerText = `⚠️ 買貴警示：比歷史均價 ($${avgPrice.toFixed(2)}) 貴了 15% 以上！`;
-        banner.classList.remove('hidden');
-      } else {
-        banner.className = "p-3.5 rounded-2xl text-xs sm:text-sm font-bold transition-all border flex items-center gap-2 bg-slate-100 border-slate-200 text-slate-600";
-        text.innerText = `👍 價格合理：歷史均價 $${avgPrice.toFixed(2)} / ${unit}，最低 $${minPrice.toFixed(2)} / ${unit}`;
-        banner.classList.remove('hidden');
-      }
-    }
-
-    async function saveRecord(e) {
-      e.preventDefault();
-      const price = parseFloat(document.getElementById('inputPrice').value) || 0;
-      const qty = parseFloat(document.getElementById('inputQty').value) || 1;
-      const unit = document.getElementById('inputUnit').value;
-      const unitNum = price / qty;
-      const unitStr = `$${unitNum.toFixed(2)} / ${unit}`;
-      const dateStr = document.getElementById('inputDate').value;
-      const noteStr = document.getElementById('inputNote').value.trim();
-      const currentGroup = getCurrentGroupCode();
-
-      const newRecord = {
-        name: document.getElementById('inputName').value.trim(),
-        category: document.getElementById('inputCategory').value,
-        store: document.getElementById('inputStore').value,
-        price: price,
-        qty: qty,
-        unit: unit,
-        unit_price_num: unitNum,
-        unit_price_str: unitStr,
-        note: noteStr,
-        date: dateStr,
-        group_code: currentGroup
-      };
-
-      if (db) {
-        try {
-          const { data, error } = await db.from('price_records').insert([newRecord]).select();
-          if (error) throw error;
-          if (data && data.length > 0) {
-            records.unshift(data[0]);
-          } else {
-            records.unshift({ ...newRecord, id: Date.now() });
-          }
-        } catch(err) {
-          console.error("雲端儲存失敗", err);
-          alert("雲端儲存失敗！錯誤： " + err.message);
-          return;
-        }
-      } else {
-        records.unshift({ ...newRecord, id: Date.now() });
-      }
-
-      document.getElementById('priceForm').reset();
-      
-      const dateEl = document.getElementById('inputDate');
-      if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
-      
-      const defaultStore = getStoreOptionsList()[0] || '全聯';
-      selectCustomOption('addStoreDropdown', 'inputStore', 'addStoreSelectedLabel', defaultStore);
-      document.getElementById('inputCategory').value = "生活用品";
-      document.getElementById('inputUnit').value = "ml";
-
-      calculateUnitPrice();
-      checkDealAlert();
-      renderRecords();
-      updateDashboardData();
-      switchTab('search');
-    }
-
-    function updateDashboardData() {
-      renderStoreCpRanking();
-    }
-
-    function renderStoreCpRanking() {
-      const container = document.getElementById('storeCpRankingList');
-      if (!container) return;
-
-      const minMap = getMinUnitPriceMap();
-      const storeWins = {};
-      let totalUniqueItems = Object.keys(minMap).length;
-
-      if (totalUniqueItems === 0) {
-        container.innerHTML = `<div class="text-slate-400 text-center py-4 text-xs font-bold">尚無足夠比價資料</div>`;
-        return;
-      }
-
-      Object.values(minMap).forEach(item => {
-        storeWins[item.store] = (storeWins[item.store] || 0) + 1;
-      });
-
-      const sortedStores = Object.keys(storeWins)
-        .map(store => ({
-          store,
-          wins: storeWins[store],
-          rate: Math.round((storeWins[store] / totalUniqueItems) * 100)
-        }))
-        .sort((a, b) => b.wins - a.wins);
-
-      container.innerHTML = sortedStores.map((item) => {
-        const logoUrl = getStoreLogoUrl(item.store);
-        return `
-          <div class="space-y-2 text-sm bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
-            <div class="flex justify-between items-center font-black text-slate-800 text-base">
-              <span class="flex items-center gap-2.5 truncate pr-2">
-                <img src="${logoUrl}" alt="${item.store}" class="w-6 h-6 rounded-full object-cover inline-block shrink-0 shadow-sm border border-slate-200">
-                <span class="text-base truncate">${item.store}</span>
-              </span>
-              <span class="text-emerald-600 font-black text-base shrink-0">${item.wins} 項歷史最低 (${item.rate}%)</span>
-            </div>
-            <div class="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
-              <div class="bg-emerald-500 h-3 rounded-full transition-all duration-500" style="width: ${item.rate}%"></div>
+        html += `
+          <div class="record-item offline-item">
+            <div class="period-bar ${periodInfo.class}">${periodInfo.text}</div>
+            <div class="record-content">
+              <div class="record-header">
+                <span class="record-time">🕒 ${timeStr}</span>
+                <span class="tag bg-pending">待同步</span>
+              </div>
+              <div class="record-body">
+                <div class="record-data">
+                  血糖：${r.glucose} <small style="font-size: 0.85rem; color: #64748b;">mg/dL</small>
+                </div>
+                <button class="delete-btn" onclick="confirmDelete(null, true, ${item.tempId})">刪除</button>
+              </div>
             </div>
           </div>
         `;
-      }).join('');
-    }
-
-    function exportToCSV() {
-      if (records.length === 0) {
-        alert('目前無比價紀錄可供匯出');
-        return;
       }
+    });
 
-      const headers = ["日期", "商品名稱", "類別", "通路", "總價格", "數量", "單位", "換算單價", "備註"];
-      const csvRows = [headers.join(",")];
+    // 渲染雲端/快取紀錄
+    cloudData.forEach(r => {
+      const dateObj = new Date(r.created_at);
+      const timeStr = dateObj.toLocaleString('zh-TW', { hour12: false, month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+      const periodInfo = getPeriodStyle(r.period);
 
-      records.forEach(r => {
-        const row = [
-          `"${formatWesternDate(r.date) || ''}"`,
-          `"${r.name || ''}"`,
-          `"${r.category || ''}"`,
-          `"${r.store || ''}"`,
-          r.price || 0,
-          r.qty || 0,
-          `"${r.unit || ''}"`,
-          `"${r.unit_price_str || ''}"`,
-          `"${r.note || ''}"`
-        ];
-        csvRows.push(row.join(","));
-      });
+      if (currentTab === 'bp') {
+        let status = '<span class="tag bg-normal">正常</span>';
+        if (r.sys >= 140 || r.dia >= 90) status = '<span class="tag bg-danger">偏高</span>';
+        else if (r.sys >= 120 || r.dia >= 80) status = '<span class="tag bg-warn">警戒</span>';
 
-      const csvString = "\uFEFF" + csvRows.join("\n");
-      const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      
-      const today = new Date().toISOString().split('T')[0];
-      const link = document.createElement("a");
-      link.setAttribute("href", url);
-      link.setAttribute("download", `price_records_${today}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
+        const bpmHtml = r.bpm ? `<div style="font-size: 0.95rem; color: #64748b; margin-top: 2px;">心跳：${r.bpm} <small>BPM</small></div>` : '';
 
-    function exportToJSON() {
-      if (records.length === 0) {
-        alert('目前無比價紀錄可供匯出');
-        return;
-      }
-
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(records, null, 2));
-      const today = new Date().toISOString().split('T')[0];
-      
-      const link = document.createElement("a");
-      link.setAttribute("href", dataStr);
-      link.setAttribute("download", `price_records_backup_${today}.json`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-
-    function switchTab(tab) {
-      document.getElementById('tab-search').classList.toggle('hidden', tab !== 'search');
-      document.getElementById('tab-add').classList.toggle('hidden', tab !== 'add');
-      document.getElementById('tab-dashboard').classList.toggle('hidden', tab !== 'dashboard');
-
-      const searchNav = document.getElementById('nav-search');
-      const dashboardNav = document.getElementById('nav-dashboard');
-      const addNavText = document.querySelector('#nav-add span');
-
-      searchNav.className = 'flex flex-col items-center gap-1 text-slate-400 hover:text-sky-600 transition';
-      dashboardNav.className = 'flex flex-col items-center gap-1 text-slate-400 hover:text-sky-600 transition';
-      if (addNavText) addNavText.className = 'text-xs font-bold text-slate-400';
-
-      if (tab === 'search') {
-        searchNav.className = 'flex flex-col items-center gap-1 text-sky-600 transition';
-      } else if (tab === 'add') {
-        if (addNavText) addNavText.className = 'text-xs font-bold text-sky-600';
-      } else if (tab === 'dashboard') {
-        dashboardNav.className = 'flex flex-col items-center gap-1 text-sky-600 transition';
-        updateDashboardData();
-      }
-    }
-
-    function toggleFamilyModal(show) {
-      document.getElementById('familyModal').classList.toggle('hidden', !show);
-      if (show) updateGroupUI();
-    }
-
-    function copyFamilyCode() {
-      const codeInput = document.getElementById('familyGroupCode');
-      navigator.clipboard.writeText(codeInput.value);
-      alert('已複製群組代碼！');
-    }
-
-    function joinFamilyGroup() {
-      const code = document.getElementById('joinCodeInput').value.trim() || document.getElementById('familyGroupCode').value.trim();
-      if (!code) {
-        alert('請輸入有效的群組代碼');
-        return;
-      }
-      const upperCode = code.toUpperCase();
-      localStorage.setItem('pwa_group_code', upperCode);
-      updateGroupUI();
-      alert(`已成功切換群組至 [${upperCode}]！`);
-      toggleFamilyModal(false);
-      fetchStoresAndRecords();
-    }
-
-    function registerServiceWorker() {
-      if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-        const swCode = `
-          self.addEventListener('install', e => self.skipWaiting());
-          self.addEventListener('activate', e => {
-            e.waitUntil(
-              caches.keys().then(keys => Promise.all(keys.map(key => caches.delete(key))))
-            );
-            return self.clients.claim();
-          });
-          self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => caches.match(e.request))));
+        html += `
+          <div class="record-item">
+            <div class="period-bar ${periodInfo.class}">${periodInfo.text}</div>
+            <div class="record-content">
+              <div class="record-header">
+                <span class="record-time">🕒 ${timeStr}</span>
+                ${status}
+              </div>
+              <div class="record-body">
+                <div>
+                  <div class="record-data">
+                    ${r.sys} / ${r.dia} <small style="font-size: 0.85rem; color: #64748b;">mmHg</small>
+                  </div>
+                  ${bpmHtml}
+                </div>
+                <button class="delete-btn" onclick="confirmDelete(${r.id})">刪除</button>
+              </div>
+            </div>
+          </div>
         `;
-        const blob = new Blob([swCode], { type: 'text/javascript' });
-        const swUrl = URL.createObjectURL(blob);
-        navigator.serviceWorker.register(swUrl).catch(err => console.log('SW registration failed:', err));
+      } else {
+        let status = '<span class="tag bg-normal">正常</span>';
+        const g = r.glucose;
+        const isFasting = r.period ? r.period.includes('空腹') : false;
+
+        if (g < 70) {
+          status = '<span class="tag bg-low">偏低</span>';
+        } else if (isFasting) {
+          if (g >= 126) status = '<span class="tag bg-danger">偏高</span>';
+          else if (g >= 100) status = '<span class="tag bg-warn">警戒</span>';
+        } else {
+          if (g >= 200) status = '<span class="tag bg-danger">偏高</span>';
+          else if (g >= 140) status = '<span class="tag bg-warn">警戒</span>';
+        }
+
+        html += `
+          <div class="record-item">
+            <div class="period-bar ${periodInfo.class}">${periodInfo.text}</div>
+            <div class="record-content">
+              <div class="record-header">
+                <span class="record-time">🕒 ${timeStr}</span>
+                ${status}
+              </div>
+              <div class="record-body">
+                <div class="record-data">
+                  血糖：${r.glucose} <small style="font-size: 0.85rem; color: #64748b;">mg/dL</small>
+                </div>
+                <button class="delete-btn" onclick="confirmDelete(${r.id})">刪除</button>
+              </div>
+            </div>
+          </div>
+        `;
       }
+    });
+
+    listEl.innerHTML = html;
+  }
+
+  window.onload = async () => {
+    const savedCode = localStorage.getItem('user_family_code');
+    const codeInput = document.getElementById('familyCode');
+    if (savedCode) {
+      codeInput.value = savedCode;
+    } else {
+      codeInput.value = 'LOVE88';
     }
-  </script>
+    
+    updateNetworkStatus();
+    loadData();
+    if (navigator.onLine) {
+      await syncOfflineQueue();
+    }
+  };
+</script>
+
 </body>
 </html>
